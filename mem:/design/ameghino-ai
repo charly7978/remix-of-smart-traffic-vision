@@ -1,0 +1,13 @@
+---
+name: Diseño Ameghino AI
+description: Sistema visual del proyecto de semáforos inteligentes — tema oscuro consola de tránsito, tokens de señal, tipografías
+type: design
+---
+
+Tema oscuro permanente (sin toggle claro/oscuro). Estética "centro de control de tránsito": fondos navy-carbón, datos en monoespaciada, luces de semáforo como acentos.
+
+- Primario: verde señal oklch(0.79 0.18 155); tokens extra: --signal-red, --signal-amber, --signal-green (clases text-signal-*, bg-signal-*).
+- Fondos: background oklch(0.15 0.018 255), cards oklch(0.19).
+- Tipografía: Space Grotesk (texto), JetBrains Mono (datos, labels técnicos, métricas). Cargadas vía Google Fonts en __root.
+- Nunca colores hardcodeados en componentes; usar tokens.
+- El simulador usa canvas con paleta propia (asfalto oscuro, verde #2ee07a para detecciones IA).
