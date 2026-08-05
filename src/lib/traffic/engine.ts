@@ -153,7 +153,7 @@ export class TrafficEngine {
 
   triggerEmergency() {
     if (this.emergencyApproach) return;
-    const approach = APPROACHES[Math.floor(Math.random() * APPROACHES.length)];
+    const approach = APPROACHES[Math.floor(Math.random() * APPROACHES.length)]!;
     this.emergencyApproach = approach;
     this.spawnVehicle(approach, "ambulance", true);
   }
@@ -186,7 +186,7 @@ export class TrafficEngine {
     this.spawnAcc += dt * LEVEL_RATES[this.level];
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
-      this.spawnVehicle(APPROACHES[Math.floor(Math.random() * APPROACHES.length)]);
+      this.spawnVehicle(APPROACHES[Math.floor(Math.random() * APPROACHES.length)]!);
     }
     this.moveVehicles(dt);
     this.updateController(dt);
@@ -206,7 +206,7 @@ export class TrafficEngine {
       truck: { len: 46, w: 22, max: 78 },
       moto: { len: 18, w: 12, max: 120 },
       ambulance: { len: 36, w: 22, max: 135 },
-    }[k];
+    }[k]!;
     this.vehicles.push({
       id: this.nextId++,
       approach,
@@ -217,7 +217,7 @@ export class TrafficEngine {
       wait: 0,
       crossed: false,
       color:
-        k === "ambulance" ? "#f4f6f8" : CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
+        k === "ambulance" ? "#f4f6f8" : CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]!,
       length: spec.len,
       width: spec.w,
     });
@@ -242,8 +242,8 @@ export class TrafficEngine {
     for (const arr of byApproach.values()) {
       arr.sort((a, b) => b.p - a.p);
       for (let i = 0; i < arr.length; i++) {
-        const v = arr[i];
-        const ahead = i > 0 ? arr[i - 1] : null;
+        const v = arr[i]!;
+        const ahead = i > 0 ? arr[i - 1]! : null;
         let obstacle = Infinity;
         if (ahead) obstacle = ahead.p - ahead.length - 10 - v.p;
         if (this.mustStop(v)) obstacle = Math.min(obstacle, WORLD.stop - v.p);

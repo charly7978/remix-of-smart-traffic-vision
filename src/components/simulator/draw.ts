@@ -115,7 +115,7 @@ function drawRoads(ctx: CanvasRenderingContext2D, night: boolean) {
 }
 
 function drawCameraCones(ctx: CanvasRenderingContext2D, engine: TrafficEngine) {
-  const cones: { apex: [number, number]; base: [number, number][] }[] = [
+  const cones: { apex: [number, number]; base: [[number, number], [number, number]] }[] = [
     { apex: [C - 96, 246], base: [[C - 84, WORLD.zoneMin], [C - 6, WORLD.zoneMin]] },
     { apex: [C + 96, S - 246], base: [[C + 6, S - WORLD.zoneMin], [C + 84, S - WORLD.zoneMin]] },
     { apex: [246, C + 96], base: [[WORLD.zoneMin, C + 6], [WORLD.zoneMin, C + 84]] },
