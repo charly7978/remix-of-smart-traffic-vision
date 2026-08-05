@@ -183,7 +183,7 @@ export class TrafficEngine {
 
   update(dt: number) {
     this.time += dt;
-    this.spawnAcc += dt * LEVEL_RATES[this.level];
+    this.spawnAcc += dt * LEVEL_RATES[this.level]!;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
       this.spawnVehicle(APPROACHES[Math.floor(Math.random() * APPROACHES.length)]!);
