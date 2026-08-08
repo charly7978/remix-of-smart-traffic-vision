@@ -1,28 +1,57 @@
 /**
  * Motor de simulación del Sistema Ameghino AI.
- * Modela una intersección de 4 accesos con un controlador de semáforo
- * adaptativo basado en densidad vehicular detectada por "visión artificial".
+ * Intersección de 4 accesos con controlador adaptativo por visión artificial.
  *
- * Reglas implementadas del proyecto:
- * - T_v = max(T_seg, min(T_max, β · σ))  (tiempo de verde por densidad)
- * - Seguridad nocturna: eje sin demanda cede el verde al eje con vehículo único
- * - Corredor de emergencia: prioridad inmediata a ambulancias detectadas
- * - Fail-safe: sin cámara, el controlador vuelve a ciclos fijos pregrabados
+ * Reglas implementadas:
+ * - T_v = max(T_seg, min(T_max, β · σ))
+ * - Perfil horario de demanda (veh/h) editable por escenario
+ * - Condiciones ambientales (lluvia / niebla) que degradan la percepción
+ * - Eventos programados (falla de cámara, clima, emergencia) sobre la línea de tiempo
+ * - Fail-safe: sin percepción confiable, el controlador vuelve a ciclo fijo pregrabado
+ * - Línea base analítica (demora de Webster) para comparar contra el ciclo fijo
  */
 
 export type Axis = "NS" | "EW";
 export type Approach = "N" | "S" | "E" | "W";
 export type VehicleKind = "car" | "truck" | "moto" | "ambulance";
 export type LightPhase = "green" | "amber" | "allred";
+export type Weather = "clear" | "rain" | "fog";
+
+export type EventType =
+  | "camera_fail"
+  | "camera_restore"
+  | "weather_clear"
+  | "weather_rain"
+  | "weather_fog"
+  | "emergency";
+
+export interface ScenarioEvent {
+  id: string;
+  /** hora del día (0-23.75) en la que se dispara */
+  hour: number;
+  type: EventType;
+}
+
+export const EVENT_LABEL_ES: Record<EventType, string> = {
+  camera_fail: "Falla de cámara",
+  camera_restore: "Cámara restablecida",
+  weather_clear: "Clima despejado",
+  weather_rain: "Lluvia",
+  weather_fog: "Niebla",
+  emergency: "Vehículo de emergencia",
+};
+
+export const WEATHER_LABEL_ES: Record<Weather, string> = {
+  clear: "Despejado",
+  rain: "Lluvia",
+  fog: "Niebla",
+};
 
 export const WORLD = {
   size: 800,
   center: 400,
-  /** posición (px recorridos) donde el frente del vehículo se detiene */
   stop: 286,
-  /** posición donde el vehículo se considera "cruzado" */
   clear: 520,
-  /** inicio de la zona de detección de la cámara */
   zoneMin: 90,
   despawn: 900,
   laneOffset: 45,
@@ -32,18 +61,18 @@ export interface Vehicle {
   id: number;
   approach: Approach;
   kind: VehicleKind;
-  /** frente del vehículo, en px recorridos desde el borde del canvas */
   p: number;
   speed: number;
   maxSpeed: number;
-  /** segundos acumulados detenido dentro de la zona de detección */
   wait: number;
   crossed: boolean;
   color: string;
   length: number;
   width: number;
-  /** confianza asignada por la IA al detectarlo (0.9 - 0.99) */
+  /** confianza de la IA; undefined = todavía no detectado */
   conf?: number;
+  /** true si la IA no logró clasificarlo (baja visibilidad) */
+  missed?: boolean;
 }
 
 export interface Detection {
@@ -52,10 +81,27 @@ export interface Detection {
   approach: Approach;
   confidence: number;
   t: number;
+  hour: number;
+}
+
+export interface LogEntry {
+  id: number;
+  hour: number;
+  text: string;
+  tone: "info" | "warn" | "danger" | "ok";
+}
+
+export interface HistoryPoint {
+  hour: number;
+  adaptive: number;
+  fixed: number;
+  flow: number;
+  queue: number;
 }
 
 export interface Snapshot {
   time: number;
+  hour: number;
   axis: Axis;
   phase: LightPhase;
   greenAssigned: number;
@@ -68,12 +114,23 @@ export interface Snapshot {
   waiting: number;
   passed: number;
   avgWait: number;
+  recentWait: number;
+  fixedWait: number;
   reduction: number;
   co2SavedKg: number;
+  fuelSavedL: number;
+  demand: number;
   night: boolean;
+  weather: Weather;
+  visibility: number;
+  detectionRate: number;
   cameraOffline: boolean;
+  failSafe: boolean;
+  failSafeReason: string | null;
   emergency: boolean;
   detections: Detection[];
+  log: LogEntry[];
+  history: HistoryPoint[];
 }
 
 const KIND_LABEL: Record<VehicleKind, string> = {
@@ -94,11 +151,19 @@ export const APPROACH_LABEL_ES: Record<Approach, string> = {
 
 const CAR_COLORS = ["#5b8def", "#94a3b8", "#e2b13c", "#7c6ff0", "#3fae8a", "#d96a5f", "#cfd8e3"];
 
-/** tasa de aparición de vehículos por nivel de tráfico (0 bajo, 1 medio, 2 alto) */
-const LEVEL_RATES = [0.35, 0.75, 1.25];
+/** Perfil horario por defecto: aforo tipo de una avenida secundaria del Conurbano (veh/h) */
+export const DEFAULT_FLOW: number[] = [
+  180, 120, 90, 80, 110, 240, 620, 1180, 1620, 1350, 1080, 1020, 1140, 1080, 1010, 1120, 1380,
+  1720, 1880, 1520, 1080, 760, 480, 280,
+];
 
-/** espera promedio estimada de un semáforo de ciclo fijo comparable */
-const BASELINE_AVG_WAIT = 18;
+export const DEFAULT_EVENTS: ScenarioEvent[] = [
+  { id: "e1", hour: 5, type: "weather_fog" },
+  { id: "e2", hour: 8, type: "weather_clear" },
+  { id: "e3", hour: 13, type: "camera_fail" },
+  { id: "e4", hour: 15, type: "camera_restore" },
+  { id: "e5", hour: 18, type: "weather_rain" },
+];
 
 const AMBER_TIME = 3;
 const ALL_RED_TIME = 1.2;
@@ -106,6 +171,12 @@ const FIXED_CYCLE_GREEN = 22;
 const BETA = 2.4;
 const T_SEG = 8;
 const T_MAX = 42;
+
+/** capacidad práctica de la intersección (veh/h, ambos ejes) */
+const CAPACITY = 3200;
+
+const WEATHER_SPEED: Record<Weather, number> = { clear: 1, rain: 0.86, fog: 0.68 };
+const WEATHER_VISIBILITY: Record<Weather, number> = { clear: 1, rain: 0.82, fog: 0.46 };
 
 export function axisOf(a: Approach): Axis {
   return a === "N" || a === "S" ? "NS" : "EW";
@@ -115,40 +186,109 @@ function opposite(ax: Axis): Axis {
   return ax === "NS" ? "EW" : "NS";
 }
 
+/** Demora media por vehículo de un ciclo fijo (Webster, término uniforme + sobresaturación) */
+export function fixedCycleDelay(flowVehH: number): number {
+  const C = 90;
+  const lambda = 0.42;
+  const x = Math.min(0.98, Math.max(0.02, flowVehH / CAPACITY));
+  const uniform = (C * Math.pow(1 - lambda, 2)) / (2 * (1 - lambda * x));
+  const overflow = 26 * Math.pow(x, 8);
+  return uniform + overflow;
+}
+
 const APPROACHES: Approach[] = ["N", "S", "E", "W"];
 
 export class TrafficEngine {
   vehicles: Vehicle[] = [];
   detections: Detection[] = [];
+  log: LogEntry[] = [];
+  history: HistoryPoint[] = [];
   time = 0;
+  /** hora del día simulada (0-24) */
+  hour = 7;
+  /** minutos simulados por segundo real */
+  minutesPerSecond = 3;
+  clockRunning = true;
+  flowByHour: number[] = [...DEFAULT_FLOW];
+  events: ScenarioEvent[] = [...DEFAULT_EVENTS];
+  /** proporción de la demanda que circula por el eje Norte–Sur */
+  nsShare = 0.58;
+  weather: Weather = "clear";
   axis: Axis = "NS";
   phase: LightPhase = "green";
   phaseTimer = 14;
   phaseElapsed = 0;
   greenAssigned = 14;
   tv: Record<Axis, number> = { NS: 14, EW: 14 };
-  level = 1;
-  night = false;
   cameraOffline = false;
   emergencyApproach: Approach | null = null;
   passed = 0;
   totalWait = 0;
+  recentWaits: number[] = [];
+  detectedCount = 0;
+  missedCount = 0;
+
   private spawnAcc = 0;
   private feedTimer = 0;
+  private histTimer = 0;
   private detectedIds = new Set<number>();
+  private firedEvents = new Set<string>();
   private nextId = 1;
+  private nextLogId = 1;
 
-  setLevel(level: number) {
-    this.level = Math.min(2, Math.max(0, Math.round(level)));
+  // ---------- configuración de escenario ----------
+
+  setHour(h: number) {
+    this.hour = Math.max(0, Math.min(23.99, h));
+    this.firedEvents.clear();
   }
 
-  setNight(value: boolean) {
-    this.night = value;
+  setClockRunning(v: boolean) {
+    this.clockRunning = v;
+  }
+
+  setMinutesPerSecond(v: number) {
+    this.minutesPerSecond = Math.max(0.5, Math.min(30, v));
+  }
+
+  setFlowAt(hour: number, value: number) {
+    const i = Math.max(0, Math.min(23, Math.round(hour)));
+    this.flowByHour[i] = Math.max(0, Math.min(3000, Math.round(value)));
+  }
+
+  setFlowProfile(profile: number[]) {
+    if (profile.length === 24) this.flowByHour = [...profile];
+  }
+
+  setNsShare(v: number) {
+    this.nsShare = Math.max(0.1, Math.min(0.9, v));
+  }
+
+  setWeather(w: Weather, silent = false) {
+    if (this.weather === w) return;
+    this.weather = w;
+    if (!silent) {
+      this.pushLog(
+        `Condición ambiental: ${WEATHER_LABEL_ES[w].toLowerCase()}`,
+        w === "clear" ? "ok" : w === "rain" ? "warn" : "danger",
+      );
+    }
+  }
+
+  setEvents(events: ScenarioEvent[]) {
+    this.events = [...events];
+    this.firedEvents.clear();
   }
 
   setCameraOffline(value: boolean) {
+    if (this.cameraOffline === value) return;
     this.cameraOffline = value;
-    if (value) this.detections = [];
+    if (value) {
+      this.detections = [];
+      this.pushLog("Pérdida de enlace con la cámara. Fail-safe: ciclo fijo pregrabado.", "danger");
+    } else {
+      this.pushLog("Enlace de video restablecido. Control adaptativo reactivado.", "ok");
+    }
   }
 
   triggerEmergency() {
@@ -156,11 +296,61 @@ export class TrafficEngine {
     const approach = APPROACHES[Math.floor(Math.random() * APPROACHES.length)]!;
     this.emergencyApproach = approach;
     this.spawnVehicle(approach, "ambulance", true);
+    this.pushLog(`Corredor de emergencia solicitado desde el ${APPROACH_LABEL_ES[approach]}.`, "danger");
+  }
+
+  // ---------- lecturas derivadas ----------
+
+  get night(): boolean {
+    return this.hour >= 20 || this.hour < 6;
+  }
+
+  get visibility(): number {
+    const base = WEATHER_VISIBILITY[this.weather];
+    return this.night ? base * 0.86 : base;
+  }
+
+  get demand(): number {
+    return this.flowByHour[Math.floor(this.hour) % 24] ?? 0;
+  }
+
+  get failSafe(): boolean {
+    return this.cameraOffline || this.detectionRate < 0.55;
+  }
+
+  get failSafeReason(): string | null {
+    if (this.cameraOffline) return "Sin señal de video";
+    if (this.detectionRate < 0.55) return "Percepción degradada por clima";
+    return null;
+  }
+
+  get detectionRate(): number {
+    const total = this.detectedCount + this.missedCount;
+    if (this.cameraOffline) return 0;
+    if (total < 4) return this.visibility;
+    return this.detectedCount / total;
+  }
+
+  get recentWait(): number {
+    if (this.recentWaits.length === 0) return 0;
+    return this.recentWaits.reduce((a, b) => a + b, 0) / this.recentWaits.length;
   }
 
   zoneCount(ax: Axis): number {
     return this.vehicles.filter(
       (v) => !v.crossed && axisOf(v.approach) === ax && v.p > WORLD.zoneMin && v.p < WORLD.stop,
+    ).length;
+  }
+
+  /** densidad percibida por la IA (excluye vehículos no clasificados) */
+  perceivedCount(ax: Axis): number {
+    return this.vehicles.filter(
+      (v) =>
+        !v.crossed &&
+        !v.missed &&
+        axisOf(v.approach) === ax &&
+        v.p > WORLD.zoneMin &&
+        v.p < WORLD.stop,
     ).length;
   }
 
@@ -181,16 +371,68 @@ export class TrafficEngine {
     return "red";
   }
 
+  // ---------- ciclo principal ----------
+
   update(dt: number) {
     this.time += dt;
-    this.spawnAcc += dt * LEVEL_RATES[this.level]!;
+    if (this.clockRunning) {
+      const prev = this.hour;
+      this.hour = (this.hour + (dt * this.minutesPerSecond) / 60) % 24;
+      if (this.hour < prev) this.firedEvents.clear();
+      this.runEvents(prev, this.hour);
+    }
+
+    const rate = this.demand / 3600;
+    this.spawnAcc += dt * rate;
     while (this.spawnAcc >= 1) {
       this.spawnAcc -= 1;
-      this.spawnVehicle(APPROACHES[Math.floor(Math.random() * APPROACHES.length)]!);
+      const ns = Math.random() < this.nsShare;
+      const pool: Approach[] = ns ? ["N", "S"] : ["E", "W"];
+      this.spawnVehicle(pool[Math.floor(Math.random() * 2)]!);
     }
+
     this.moveVehicles(dt);
     this.updateController(dt);
     this.updateFeed(dt);
+    this.updateHistory(dt);
+  }
+
+  private runEvents(prevHour: number, nowHour: number) {
+    for (const ev of this.events) {
+      if (this.firedEvents.has(ev.id)) continue;
+      const crossed = prevHour <= nowHour ? ev.hour > prevHour && ev.hour <= nowHour : false;
+      if (!crossed) continue;
+      this.firedEvents.add(ev.id);
+      this.applyEvent(ev.type);
+    }
+  }
+
+  applyEvent(type: EventType) {
+    switch (type) {
+      case "camera_fail":
+        this.setCameraOffline(true);
+        break;
+      case "camera_restore":
+        this.setCameraOffline(false);
+        break;
+      case "weather_clear":
+        this.setWeather("clear");
+        break;
+      case "weather_rain":
+        this.setWeather("rain");
+        break;
+      case "weather_fog":
+        this.setWeather("fog");
+        break;
+      case "emergency":
+        this.triggerEmergency();
+        break;
+    }
+  }
+
+  private pushLog(text: string, tone: LogEntry["tone"]) {
+    this.log.unshift({ id: this.nextLogId++, hour: this.hour, text, tone });
+    if (this.log.length > 40) this.log.pop();
   }
 
   private spawnVehicle(approach: Approach, kind?: VehicleKind, force = false) {
@@ -207,13 +449,14 @@ export class TrafficEngine {
       moto: { len: 18, w: 12, max: 120 },
       ambulance: { len: 36, w: 22, max: 135 },
     }[k]!;
+    const wf = WEATHER_SPEED[this.weather];
     this.vehicles.push({
       id: this.nextId++,
       approach,
       kind: k,
       p: -spec.len,
-      speed: spec.max * 0.6,
-      maxSpeed: spec.max,
+      speed: spec.max * wf * 0.6,
+      maxSpeed: spec.max * wf,
       wait: 0,
       crossed: false,
       color:
@@ -239,6 +482,7 @@ export class TrafficEngine {
       arr.push(v);
       byApproach.set(v.approach, arr);
     }
+    const grip = this.weather === "clear" ? 1 : this.weather === "rain" ? 0.82 : 0.7;
     for (const arr of byApproach.values()) {
       arr.sort((a, b) => b.p - a.p);
       for (let i = 0; i < arr.length; i++) {
@@ -251,7 +495,7 @@ export class TrafficEngine {
           v.speed = Math.min(v.speed, Math.max(0, (obstacle - 6) * 1.6));
           if (obstacle <= 8) v.speed = 0;
         } else {
-          v.speed = Math.min(v.maxSpeed, v.speed + 110 * dt);
+          v.speed = Math.min(v.maxSpeed, v.speed + 110 * grip * dt);
         }
         v.p += v.speed * dt;
         if (v.speed < 3 && v.p > WORLD.zoneMin && !v.crossed) v.wait += dt;
@@ -259,8 +503,11 @@ export class TrafficEngine {
           v.crossed = true;
           this.passed += 1;
           this.totalWait += v.wait;
+          this.recentWaits.push(v.wait);
+          if (this.recentWaits.length > 40) this.recentWaits.shift();
           if (v.kind === "ambulance" && this.emergencyApproach === v.approach) {
             this.emergencyApproach = null;
+            this.pushLog("Ambulancia liberó la intersección. Ciclo normal restituido.", "ok");
           }
         }
       }
@@ -276,14 +523,12 @@ export class TrafficEngine {
     if (this.phase === "green") {
       let endPhase = this.phaseTimer <= 0;
       if (ambAxis === this.axis) {
-        // corredor de emergencia: sostener el verde hasta que cruce
         if (this.phaseTimer < 8) this.phaseTimer = 8;
         endPhase = false;
       }
       if (ambAxis && ambAxis !== this.axis && this.phaseElapsed > 3) endPhase = true;
-      // seguridad nocturna: sin demanda en el eje verde, ceder al vehículo que espera
-      if (this.night && !this.cameraOffline && this.phaseElapsed > 5) {
-        if (this.zoneCount(this.axis) === 0 && this.zoneCount(opposite(this.axis)) > 0) {
+      if (this.night && !this.failSafe && this.phaseElapsed > 5) {
+        if (this.perceivedCount(this.axis) === 0 && this.perceivedCount(opposite(this.axis)) > 0) {
           endPhase = true;
         }
       }
@@ -310,11 +555,12 @@ export class TrafficEngine {
   /** T_v = max(T_seg, min(T_max, β · σ)) */
   private assignGreen(ax: Axis) {
     let g: number;
-    if (this.cameraOffline) {
+    if (this.failSafe) {
       g = FIXED_CYCLE_GREEN;
     } else {
-      const sigma = this.zoneCount(ax);
+      const sigma = this.perceivedCount(ax);
       g = Math.min(T_MAX, Math.max(T_SEG, 4 + BETA * sigma));
+      if (this.weather !== "clear") g += 2; // margen por frenado en calzada húmeda
     }
     if (this.emergencyApproach && axisOf(this.emergencyApproach) === ax) g = Math.max(g, 14);
     this.greenAssigned = g;
@@ -323,35 +569,60 @@ export class TrafficEngine {
 
   private updateFeed(dt: number) {
     this.feedTimer += dt;
-    if (this.feedTimer < 0.7) return;
+    if (this.feedTimer < 0.6) return;
     this.feedTimer = 0;
     if (this.cameraOffline) return;
+    const vis = this.visibility;
     for (const v of this.vehicles) {
       if (v.crossed || this.detectedIds.has(v.id)) continue;
       if (v.p > WORLD.zoneMin && v.p < WORLD.stop) {
         this.detectedIds.add(v.id);
-        v.conf = Math.min(0.99, 0.9 + Math.random() * 0.09);
+        const conf = Math.min(0.99, 0.55 + vis * (0.35 + Math.random() * 0.12));
+        if (conf < 0.7) {
+          v.missed = true;
+          this.missedCount += 1;
+          continue;
+        }
+        v.conf = conf;
+        this.detectedCount += 1;
         this.detections.unshift({
           id: v.id,
           kind: v.kind,
           approach: v.approach,
-          confidence: v.conf,
+          confidence: conf,
           t: this.time,
+          hour: this.hour,
         });
-        if (this.detections.length > 9) this.detections.pop();
+        if (this.detections.length > 10) this.detections.pop();
       }
     }
   }
 
+  private updateHistory(dt: number) {
+    this.histTimer += dt;
+    if (this.histTimer < 1.2) return;
+    this.histTimer = 0;
+    this.history.push({
+      hour: this.hour,
+      adaptive: this.recentWait,
+      fixed: fixedCycleDelay(this.demand),
+      flow: this.demand,
+      queue: this.queueCount("NS") + this.queueCount("EW"),
+    });
+    if (this.history.length > 160) this.history.shift();
+  }
+
   getSnapshot(): Snapshot {
     const avgWait = this.passed > 0 ? this.totalWait / this.passed : 0;
-    const reduction =
-      this.passed > 0
-        ? Math.max(0, Math.min(95, ((BASELINE_AVG_WAIT - avgWait) / BASELINE_AVG_WAIT) * 100))
-        : 0;
-    const co2SavedKg = Math.max(0, (BASELINE_AVG_WAIT - avgWait) * this.passed * 2.3) / 1000;
+    const fixedWait = fixedCycleDelay(this.demand);
+    const ref = this.recentWait > 0 ? this.recentWait : avgWait;
+    const reduction = ref > 0 ? Math.max(0, Math.min(95, ((fixedWait - ref) / fixedWait) * 100)) : 0;
+    const savedSeconds = Math.max(0, fixedWait - ref) * this.passed;
+    const fuelSavedL = savedSeconds * 0.0006;
+    const co2SavedKg = (savedSeconds * 2.3) / 1000;
     return {
       time: this.time,
+      hour: this.hour,
       axis: this.axis,
       phase: this.phase,
       greenAssigned: this.greenAssigned,
@@ -364,12 +635,23 @@ export class TrafficEngine {
       waiting: this.vehicles.filter((v) => !v.crossed && v.speed < 3 && v.p > WORLD.zoneMin).length,
       passed: this.passed,
       avgWait,
+      recentWait: this.recentWait,
+      fixedWait,
       reduction,
       co2SavedKg,
+      fuelSavedL,
+      demand: this.demand,
       night: this.night,
+      weather: this.weather,
+      visibility: this.visibility,
+      detectionRate: this.detectionRate,
       cameraOffline: this.cameraOffline,
+      failSafe: this.failSafe,
+      failSafeReason: this.failSafeReason,
       emergency: this.emergencyApproach !== null,
       detections: [...this.detections],
+      log: [...this.log],
+      history: [...this.history],
     };
   }
 }
