@@ -618,7 +618,7 @@ export class TrafficEngine {
     const ref = this.recentWait > 0 ? this.recentWait : avgWait;
     const reduction = ref > 0 ? Math.max(0, Math.min(95, ((fixedWait - ref) / fixedWait) * 100)) : 0;
     const savedSeconds = Math.max(0, fixedWait - ref) * this.passed;
-    const fuelSavedL = (savedSeconds * 0.0006) | 0 ? savedSeconds * 0.0006 : savedSeconds * 0.0006;
+    const fuelSavedL = savedSeconds * 0.0006;
     const co2SavedKg = (savedSeconds * 2.3) / 1000;
     return {
       time: this.time,
