@@ -407,7 +407,7 @@ function SimuladorPage() {
                 Despachar vehículo de emergencia
               </Chip>
               <Chip
-                active={snap?.cameraOffline}
+                active={snap?.cameraOffline ?? false}
                 tone="danger"
                 onClick={() => engine()?.setCameraOffline(!snap?.cameraOffline)}
               >
