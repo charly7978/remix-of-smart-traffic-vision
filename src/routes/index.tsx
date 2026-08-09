@@ -130,7 +130,57 @@ function Index() {
 
       <section className="mx-auto max-w-6xl px-4 py-20">
         <p className="font-mono text-xs tracking-[0.3em] text-signal-green uppercase">
-          Diagnóstico
+          Resumen ejecutivo
+        </p>
+        <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Qué se propone, con qué evidencia y qué se pide
+        </h2>
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          <article className="rounded-xl border border-border bg-card p-6">
+            <p className="font-mono text-xs tracking-widest text-signal-red uppercase">
+              Diagnóstico
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              La semaforización del Conurbano opera con planes fijos que ignoran la demanda real:
+              congestión evitable en hora pico, esperas sin sentido de madrugada —con el conductor
+              expuesto— y emisiones por ralentí. El costo lo paga el vecino en tiempo, combustible y
+              riesgo.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-card p-6">
+            <p className="font-mono text-xs tracking-widest text-signal-amber uppercase">
+              Propuesta: percibir · decidir · actuar
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Cada esquina incorpora una unidad de borde que percibe la escena con visión
+              artificial, razona como lo haría un agente de tránsito y actúa sobre el controlador
+              existente por NTCIP. Un validador determinista verifica cada decisión y, ante
+              cualquier falla, el equipo revierte al plan fijo homologado.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-card p-6">
+            <p className="font-mono text-xs tracking-widest text-signal-green uppercase">
+              Beneficios medibles
+            </p>
+            <ul className="mt-3 flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
+              <li>· Reducción estimada de la demora media por vehículo en corredores optimizados.</li>
+              <li>· Verde inmediato nocturno: menos tiempo detenido y menor exposición al delito.</li>
+              <li>· Corredor automático para ambulancias y bomberos.</li>
+              <li>· Menos combustible y CO₂ por parada evitada.</li>
+              <li>· Costo por intersección un orden de magnitud menor al de soluciones corporativas.</li>
+            </ul>
+          </article>
+        </div>
+        <p className="mt-6 max-w-3xl border-l-2 border-signal-green pl-4 text-sm leading-relaxed text-foreground">
+          Lo que se solicita en esta instancia es acotado y verificable: autorización para un piloto
+          en una intersección, un punto de energía y acceso al gabinete existente. Toda decisión del
+          sistema queda registrada y auditable.
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-20">
+        <p className="font-mono text-xs tracking-[0.3em] text-signal-green uppercase">
+          Diagnóstico ampliado
         </p>
         <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           El modelo estático de tránsito está en crisis
