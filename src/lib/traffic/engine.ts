@@ -159,6 +159,9 @@ export interface Snapshot {
   detections: Detection[];
   log: LogEntry[];
   history: HistoryPoint[];
+  decisions: AgentDecision[];
+  pedWaiting: number;
+  pedCrossing: number;
 }
 
 const KIND_LABEL: Record<VehicleKind, string> = {
@@ -228,6 +231,8 @@ const APPROACHES: Approach[] = ["N", "S", "E", "W"];
 
 export class TrafficEngine {
   vehicles: Vehicle[] = [];
+  pedestrians: Pedestrian[] = [];
+  decisions: AgentDecision[] = [];
   detections: Detection[] = [];
   log: LogEntry[] = [];
   history: HistoryPoint[] = [];
@@ -263,6 +268,9 @@ export class TrafficEngine {
   private firedEvents = new Set<string>();
   private nextId = 1;
   private nextLogId = 1;
+  private nextPedId = 1;
+  private nextDecisionId = 1;
+  private pedTimer = 0;
 
   // ---------- configuración de escenario ----------
 
@@ -420,9 +428,62 @@ export class TrafficEngine {
     }
 
     this.moveVehicles(dt);
+    this.movePedestrians(dt);
     this.updateController(dt);
     this.updateFeed(dt);
     this.updateHistory(dt);
+  }
+
+  // ---------- peatones ----------
+
+  get pedWaiting(): number {
+    return this.pedestrians.filter((p) => p.waiting).length;
+  }
+
+  get pedCrossing(): number {
+    return this.pedestrians.filter((p) => !p.waiting).length;
+  }
+
+  pedWaitingOn(ax: Axis): number {
+    return this.pedestrians.filter((p) => p.waiting && p.crossAxis === ax).length;
+  }
+
+  spawnPedestrian(crossAxis?: Axis) {
+    const ax: Axis = crossAxis ?? (Math.random() < 0.5 ? "NS" : "EW");
+    this.pedestrians.push({
+      id: this.nextPedId++,
+      crossAxis: ax,
+      side: Math.random() < 0.5 ? -1 : 1,
+      p: 0,
+      speed: 0.16 + Math.random() * 0.07,
+      waiting: true,
+      wait: 0,
+      reduced: Math.random() < 0.16,
+    });
+  }
+
+  private movePedestrians(dt: number) {
+    this.pedTimer += dt;
+    const interval = this.night ? 9 : 3.4;
+    if (this.pedTimer > interval) {
+      this.pedTimer = 0;
+      if (this.pedestrians.length < 10) this.spawnPedestrian();
+    }
+    for (const p of this.pedestrians) {
+      const safe = this.phase === "green" && this.axis !== p.crossAxis;
+      if (p.waiting) {
+        p.wait += dt;
+        if (safe) p.waiting = false;
+      } else {
+        p.p += (p.reduced ? p.speed * 0.62 : p.speed) * dt;
+      }
+    }
+    this.pedestrians = this.pedestrians.filter((p) => p.p < 1.05);
+  }
+
+  private pushDecision(d: Omit<AgentDecision, "id" | "hour">) {
+    this.decisions.unshift({ ...d, id: this.nextDecisionId++, hour: this.hour });
+    if (this.decisions.length > 14) this.decisions.pop();
   }
 
   private runEvents(prevHour: number, nowHour: number) {
