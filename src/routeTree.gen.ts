@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InteligenciaRouteImport } from './routes/inteligencia'
 import { Route as ProyectoRouteImport } from './routes/proyecto'
 import { Route as SimuladorRouteImport } from './routes/simulador'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InteligenciaRoute = InteligenciaRouteImport.update({
+  id: '/inteligencia',
+  path: '/inteligencia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProyectoRoute = ProyectoRouteImport.update({
@@ -31,30 +37,34 @@ const SimuladorRoute = SimuladorRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/inteligencia': typeof InteligenciaRoute
   '/proyecto': typeof ProyectoRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/inteligencia': typeof InteligenciaRoute
   '/proyecto': typeof ProyectoRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/inteligencia': typeof InteligenciaRoute
   '/proyecto': typeof ProyectoRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/proyecto' | '/simulador'
+  fullPaths: '/' | '/inteligencia' | '/proyecto' | '/simulador'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/proyecto' | '/simulador'
-  id: '__root__' | '/' | '/proyecto' | '/simulador'
+  to: '/' | '/inteligencia' | '/proyecto' | '/simulador'
+  id: '__root__' | '/' | '/inteligencia' | '/proyecto' | '/simulador'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InteligenciaRoute: typeof InteligenciaRoute
   ProyectoRoute: typeof ProyectoRoute
   SimuladorRoute: typeof SimuladorRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inteligencia': {
+      id: '/inteligencia'
+      path: '/inteligencia'
+      fullPath: '/inteligencia'
+      preLoaderRoute: typeof InteligenciaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/proyecto': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InteligenciaRoute: InteligenciaRoute,
   ProyectoRoute: ProyectoRoute,
   SimuladorRoute: SimuladorRoute,
 }
