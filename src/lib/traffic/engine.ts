@@ -99,6 +99,34 @@ export interface HistoryPoint {
   queue: number;
 }
 
+/** Decisión razonada del agente (nivel VLM + validador determinista) */
+export interface AgentDecision {
+  id: number;
+  hour: number;
+  axis: Axis;
+  seconds: number;
+  action: string;
+  rationale: string;
+  confidence: number;
+  latencyMs: number;
+  source: "vlm" | "detector" | "failsafe" | "emergency";
+}
+
+export interface Pedestrian {
+  id: number;
+  /** calzada que cruza: "NS" = cruza la avenida Norte–Sur */
+  crossAxis: Axis;
+  /** lado del cruce (-1 / 1) para ubicar la senda */
+  side: -1 | 1;
+  /** progreso 0..1 sobre la senda */
+  p: number;
+  speed: number;
+  waiting: boolean;
+  wait: number;
+  /** peatón con movilidad reducida: requiere verde extendido */
+  reduced: boolean;
+}
+
 export interface Snapshot {
   time: number;
   hour: number;
