@@ -1,4 +1,4 @@
-const VISION_BASE = import.meta.env.VITE_VISION_BASE || "http://localhost:8787";
+const VISION_BASE = (import.meta as any).env?.VITE_VISION_BASE || "http://localhost:8787";
 
 export type CameraSource = {
   id: string;
