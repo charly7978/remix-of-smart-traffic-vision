@@ -110,6 +110,171 @@ export interface AgentDecision {
   confidence: number;
   latencyMs: number;
   source: "vlm" | "detector" | "failsafe" | "emergency";
+  /** evidencia exacta que disparó el razonamiento */
+  evidence: Evidence;
+  /** contrato JSON publicado al controlador */
+  contract: DecisionContract;
+}
+
+/* ------------------------------------------------------------------ */
+/* Parámetros de prioridad (auditables y contrafactuales)              */
+/* ------------------------------------------------------------------ */
+
+export interface PriorityConfig {
+  /** segundos de verde por objeto válido detectado (β) */
+  beta: number;
+  /** verde mínimo de seguridad (T_seg) */
+  tSeg: number;
+  /** verde máximo por fase (T_max) */
+  tMax: number;
+  /** peso de la espera peatonal: acorta el verde vehicular */
+  pedWeight: number;
+  /** techo de verde vehicular si espera una persona con movilidad reducida */
+  reducedCap: number;
+  /** verde mínimo garantizado al corredor de emergencia */
+  emergencyMin: number;
+  /** margen de frenado agregado con calzada mojada o niebla */
+  weatherMargin: number;
+  /** tasa de clasificación mínima para confiar en la percepción */
+  visibilityFloor: number;
+}
+
+export const DEFAULT_PRIORITY: PriorityConfig = {
+  beta: 2.4,
+  tSeg: 8,
+  tMax: 42,
+  pedWeight: 1,
+  reducedCap: 16,
+  emergencyMin: 14,
+  weatherMargin: 2,
+  visibilityFloor: 0.55,
+};
+
+export const PRIORITY_FIELDS: {
+  key: keyof PriorityConfig;
+  label: string;
+  hint: string;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+}[] = [
+  {
+    key: "pedWeight",
+    label: "Prioridad peatonal",
+    hint: "Cuánto acorta el verde vehicular cada persona esperando en la senda.",
+    min: 0,
+    max: 3,
+    step: 0.1,
+    unit: "×",
+  },
+  {
+    key: "reducedCap",
+    label: "Techo con movilidad reducida",
+    hint: "Verde vehicular máximo cuando espera una persona con movilidad reducida.",
+    min: 8,
+    max: 30,
+    step: 1,
+    unit: "s",
+  },
+  {
+    key: "emergencyMin",
+    label: "Corredor de emergencia",
+    hint: "Verde mínimo garantizado al eje por el que circula la ambulancia.",
+    min: 8,
+    max: 30,
+    step: 1,
+    unit: "s",
+  },
+  {
+    key: "weatherMargin",
+    label: "Sensibilidad al clima",
+    hint: "Segundos extra de frenado con calzada mojada o niebla.",
+    min: 0,
+    max: 8,
+    step: 0.5,
+    unit: "s",
+  },
+  {
+    key: "visibilityFloor",
+    label: "Umbral de visibilidad",
+    hint: "Tasa de clasificación por debajo de la cual el sistema deja de confiar en sí mismo.",
+    min: 0.3,
+    max: 0.85,
+    step: 0.01,
+    unit: "",
+  },
+  {
+    key: "beta",
+    label: "Ganancia β",
+    hint: "Segundos de verde asignados por cada objeto válido en cola.",
+    min: 1,
+    max: 5,
+    step: 0.1,
+    unit: "s/obj",
+  },
+];
+
+/** Evidencia observada en el borde en el instante de decidir */
+export interface Evidence {
+  hour: number;
+  axis: Axis;
+  sigma: number;
+  sigmaOther: number;
+  queue: number;
+  missed: number;
+  pedWaiting: number;
+  pedWaitingOther: number;
+  reducedWaiting: boolean;
+  weather: Weather;
+  visibility: number;
+  detectionRate: number;
+  night: boolean;
+  cameraOffline: boolean;
+  emergencyApproach: Approach | null;
+  demand: number;
+}
+
+export interface DecisionContract {
+  schema: "ameghino.decision.v1";
+  intersection_id: string;
+  local_time: string;
+  phase_request: {
+    axis: Axis;
+    green_s: number;
+    min_green_s: number;
+    amber_s: number;
+    all_red_s: number;
+  };
+  evidence: Evidence;
+  priority_profile: PriorityConfig;
+  model: {
+    perception: string;
+    reasoner: string;
+    latency_ms: number;
+  };
+  confidence: number;
+  source: AgentDecision["source"];
+  rationale: string;
+  validator: {
+    min_green_ok: boolean;
+    max_green_ok: boolean;
+    conflicting_green: boolean;
+    interlock: "hardware+software";
+    accepted: boolean;
+  };
+  human_in_the_loop: false;
+}
+
+export interface DecisionResult {
+  axis: Axis;
+  seconds: number;
+  source: AgentDecision["source"];
+  confidence: number;
+  rationale: string;
+  action: string;
+  latencyMs: number;
+  contract: DecisionContract;
 }
 
 export interface Pedestrian {
@@ -199,9 +364,9 @@ export const DEFAULT_EVENTS: ScenarioEvent[] = [
 const AMBER_TIME = 3;
 const ALL_RED_TIME = 1.2;
 const FIXED_CYCLE_GREEN = 22;
-const BETA = 2.4;
-const T_SEG = 8;
-const T_MAX = 42;
+
+const PERCEPTION_MODEL = "YOLOv11-s TensorRT INT8 @ Jetson Orin Nano";
+const REASONER_MODEL = "Qwen2.5-VL-3B INT4 (borde) + validador determinista";
 
 /** capacidad práctica de la intersección (veh/h, ambos ejes) */
 const CAPACITY = 3200;
