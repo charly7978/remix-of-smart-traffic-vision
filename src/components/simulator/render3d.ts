@@ -736,13 +736,13 @@ export function drawScene3D(
   {
     const ax = engine.axis;
     ctx.save();
-    ctx.globalAlpha = engine.phase === "green" ? 0.16 : 0.06;
+    ctx.globalAlpha = engine.phase === "green" ? 0.1 : 0.04;
     planeRect(
       ctx,
       0,
       0,
-      ax === "NS" ? ROAD_HALF * 2 : 620,
-      ax === "NS" ? 620 : ROAD_HALF * 2,
+      ax === "NS" ? ROAD_HALF * 2 : 440,
+      ax === "NS" ? 440 : ROAD_HALF * 2,
       1.1,
       engine.phase === "green" ? PAL.green : PAL.amber,
     );
