@@ -124,8 +124,8 @@ export function RealCameraPanel({
           <Metric label="Clima" value={metrics.weather} />
           <Metric label="Noche" value={metrics.night ? "Sí" : "No"} />
           <Metric label="Confianza" value={`${(metrics.confidence * 100).toFixed(0)}%`} />
-          <Metric label="NS" value={`${(laneDensity['NS'] || 0).toFixed(1)}`} />
-          <Metric label="EW" value={`${(laneDensity['EW'] || 0).toFixed(1)}`} />
+          <Metric label="NS" value={`${(metrics.laneDensity['NS'] || 0).toFixed(1)}`} />
+          <Metric label="EW" value={`${(metrics.laneDensity['EW'] || 0).toFixed(1)}`} />
         </div>
       )}
     </div>
