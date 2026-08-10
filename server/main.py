@@ -3,7 +3,7 @@ import base64
 import json
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import cv2
 import numpy as np
@@ -16,6 +16,24 @@ from detector import YoloDetector, DetectionFrame
 from decision import detections_to_evidence, auto_decide
 
 app = FastAPI(title="Ameghino AI Vision")
+
+
+def _json_safe(value: Any) -> Any:
+    """Normaliza tipos numpy (float32, int64, ndarray) a tipos JSON nativos.
+
+    Los tensores del modelo ONNX producen np.float32/np.int64 que no son
+    serializables por json.dumps; esta normalización se aplica de forma
+    defensiva sobre la respuesta final para blindar ambos backends.
+    """
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
 
 app.add_middleware(
     CORSMiddleware,

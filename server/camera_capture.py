@@ -3,6 +3,7 @@ import time
 import threading
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import cv2
@@ -58,6 +59,11 @@ def resolve_stream_url(raw_url: str) -> str:
     return raw_url
 
 
+LOCAL_VIDEO_PATH = Path(__file__).resolve().parent / "assets" / "demo-interseccion.mp4"
+SNAPSHOT_RATE_SECONDS = 2.0
+_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+
+
 class CameraCapture:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -68,6 +74,7 @@ class CameraCapture:
         self._snapshot_session = requests.Session()
         self._is_snapshot_mode = False
         self._resolved_url = ""
+        self._last_snapshot_ts = 0.0
 
     def sources(self) -> list[CameraSource]:
         return [
@@ -128,6 +135,14 @@ class CameraCapture:
                 intersection_type="Cruce de 4 Carriles en Vivo",
             ),
             CameraSource(
+                id="local-webcam",
+                name="Cámara local (webcam)",
+                url="0",
+                kind="local",
+                location="Dispositivo del equipo",
+                intersection_type="Prueba de Cámara Directa",
+            ),
+            CameraSource(
                 id="public-url",
                 name="URL personalizada (RTSP / HLS / YouTube Live / Direct Stream)",
                 url="",
@@ -144,7 +159,7 @@ class CameraCapture:
 
     def start(self) -> None:
         with self._lock:
-            if self._cap is not None:
+            if self._cap is not None or self._is_snapshot_mode:
                 return
             raw_url = self._source.url if self._source else ""
             if not raw_url:
@@ -152,9 +167,11 @@ class CameraCapture:
 
             url = resolve_stream_url(raw_url)
             self._resolved_url = url
-            self._is_snapshot_mode = url.endswith(".jpg") or url.endswith(".jpeg") or url.endswith(".png")
+            self._is_snapshot_mode = self._is_image_url(url)
 
             if self._is_snapshot_mode:
+                if self.read_snapshot(url) is None:
+                    raise RuntimeError(f"No se pudo leer la imagen: {url}")
                 return
 
             try:
@@ -169,6 +186,7 @@ class CameraCapture:
                         raise RuntimeError(f"No se pudo conectar a la cámara del cruce: {raw_url}")
             except Exception as e:
                 self._cap = None
+                self._is_snapshot_mode = False
                 self._last_error = str(e)
                 raise
 
@@ -180,10 +198,16 @@ class CameraCapture:
                 except Exception:
                     pass
                 self._cap = None
+            self._is_snapshot_mode = False
+            self._last_snapshot_ts = 0.0
 
     def read_frame(self):
         with self._lock:
             if self._is_snapshot_mode:
+                now = time.time()
+                if now - self._last_snapshot_ts < SNAPSHOT_RATE_SECONDS and self._last_frame is not None:
+                    return self._last_frame
+                self._last_snapshot_ts = now
                 return self.read_snapshot(self._resolved_url or (self._source.url if self._source else ""))
 
             if self._cap is None or not self._cap.isOpened():
@@ -221,3 +245,8 @@ class CameraCapture:
 
     def last_error(self) -> Optional[str]:
         return self._last_error
+
+    @staticmethod
+    def _is_image_url(url: str) -> bool:
+        path = url.split("?")[0].lower()
+        return path.endswith(_IMAGE_EXTENSIONS)
