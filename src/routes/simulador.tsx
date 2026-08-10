@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DEFAULT_DRAW_OPTIONS, drawScene, type DrawOptions } from "@/components/simulator/draw";
+import { drawScene3D } from "@/components/simulator/render3d";
+import { AuditPanel, type AuditFrame } from "@/components/simulator/AuditPanel";
+import { CounterfactualPanel } from "@/components/simulator/CounterfactualPanel";
 import { EventTimeline } from "@/components/simulator/EventTimeline";
 import { FLOW_PRESETS, FlowProfileEditor } from "@/components/simulator/FlowProfileEditor";
 import { WaitChart } from "@/components/simulator/WaitChart";
 import {
   APPROACH_LABEL_ES,
+  DEFAULT_PRIORITY,
   DEFAULT_EVENTS,
   DEFAULT_FLOW,
   KIND_LABEL_ES,
   TrafficEngine,
   WEATHER_LABEL_ES,
+  type PriorityConfig,
   type ScenarioEvent,
   type Snapshot,
   type Weather,
@@ -258,11 +263,19 @@ function SimuladorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<TrafficEngine | null>(null);
   const optsRef = useRef<DrawOptions>({ ...DEFAULT_DRAW_OPTIONS });
+  const viewRef = useRef<"3d" | "cenital">("3d");
+  const pausedRef = useRef(false);
+  const framesRef = useRef<AuditFrame[]>([]);
+  const thumbRef = useRef<HTMLCanvasElement | null>(null);
 
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [mode, setMode] = useState<"guiado" | "libre">("guiado");
   const [layers, setLayers] = useState<DrawOptions>({ ...DEFAULT_DRAW_OPTIONS });
+  const [view, setView] = useState<"3d" | "cenital">("3d");
+  const [paused, setPaused] = useState(false);
+  const [frames, setFrames] = useState<AuditFrame[]>([]);
+  const [priority, setPriority] = useState<PriorityConfig>({ ...DEFAULT_PRIORITY });
 
   // guion
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -278,6 +291,8 @@ function SimuladorPage() {
   const [startHour, setStartHour] = useState(7);
 
   optsRef.current = layers;
+  viewRef.current = view;
+  pausedRef.current = paused;
 
   useEffect(() => {
     const engine = new TrafficEngine();
@@ -301,15 +316,49 @@ function SimuladorPage() {
     let raf = 0;
     let last = performance.now();
     let acc = 0;
+    let capAcc = 0;
+    let lastDecisionId = 0;
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      engine.update(dt);
-      drawScene(ctx, engine, now, optsRef.current);
+      if (!pausedRef.current) engine.update(dt);
+      if (viewRef.current === "3d") drawScene3D(ctx, engine, now, optsRef.current);
+      else drawScene(ctx, engine, now, optsRef.current);
       acc += dt;
       if (acc > 0.2) {
         acc = 0;
         setSnap(engine.getSnapshot());
+      }
+      capAcc += dt;
+      if (!pausedRef.current && capAcc > 0.4) {
+        capAcc = 0;
+        let thumb = thumbRef.current;
+        if (!thumb) {
+          thumb = document.createElement("canvas");
+          thumb.width = 300;
+          thumb.height = 300;
+          thumbRef.current = thumb;
+        }
+        const tctx = thumb.getContext("2d");
+        const top = engine.decisions[0] ?? null;
+        if (tctx) {
+          tctx.drawImage(canvas, 0, 0, 300, 300);
+          const next: AuditFrame = {
+            i: framesRef.current.length,
+            hour: engine.hour,
+            thumb: thumb.toDataURL("image/jpeg", 0.55),
+            phase: engine.phase === "green" ? "VERDE" : engine.phase === "amber" ? "AMARILLO" : "TODO ROJO",
+            axis: engine.axis === "NS" ? "N–S" : "E–O",
+            green: engine.greenAssigned,
+            sigmaNs: engine.zoneCount("NS"),
+            sigmaEw: engine.zoneCount("EW"),
+            decision: top && top.id !== lastDecisionId ? top : null,
+          };
+          if (top && top.id !== lastDecisionId) lastDecisionId = top.id;
+          const buf = [...framesRef.current, next].slice(-90);
+          framesRef.current = buf;
+          setFrames(buf);
+        }
       }
       raf = requestAnimationFrame(loop);
     };
