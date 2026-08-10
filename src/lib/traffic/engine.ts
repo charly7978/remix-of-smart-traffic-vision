@@ -13,7 +13,7 @@
 
 export type Axis = "NS" | "EW";
 export type Approach = "N" | "S" | "E" | "W";
-export type VehicleKind = "car" | "truck" | "moto" | "ambulance";
+export type VehicleKind = "car" | "truck" | "moto" | "ambulance" | "bus";
 export type LightPhase = "green" | "amber" | "allred";
 export type Weather = "clear" | "rain" | "fog";
 
@@ -338,6 +338,7 @@ const KIND_LABEL: Record<VehicleKind, string> = {
   truck: "camión",
   moto: "moto",
   ambulance: "ambulancia",
+  bus: "colectivo",
 };
 
 export const KIND_LABEL_ES = KIND_LABEL;
@@ -822,13 +823,14 @@ export class TrafficEngine {
       kind ??
       (() => {
         const r = Math.random();
-        return r < 0.72 ? "car" : r < 0.86 ? "truck" : "moto";
+        return r < 0.65 ? "car" : r < 0.78 ? "truck" : r < 0.90 ? "bus" : "moto";
       })();
     const spec = {
       car: { len: 30, w: 20, max: 100 },
       truck: { len: 46, w: 22, max: 78 },
       moto: { len: 18, w: 12, max: 120 },
       ambulance: { len: 36, w: 22, max: 135 },
+      bus: { len: 52, w: 24, max: 70 },
     }[k]!;
     const wf = WEATHER_SPEED[this.weather];
     this.vehicles.push({

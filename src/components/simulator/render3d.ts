@@ -628,13 +628,19 @@ function drawAnalysis(ctx: CanvasRenderingContext2D, engine: TrafficEngine) {
       ctx.lineTo(b.x + b.w, b.y + b.h - s);
       ctx.stroke();
     }
+
+    let kindText = KIND_LABEL_ES[v.kind] || v.kind;
+    if (v.kind === "bus") kindText = "Colectivo L343";
+    else if (v.kind === "truck") kindText = "Camión L-181";
+    else if (v.kind === "ambulance") kindText = "SAME 3F (EMERGENCIA)";
+
     const label = ok
-      ? `${KIND_LABEL_ES[v.kind]} ${(v.conf! * 100).toFixed(0)}%`
+      ? `${kindText} ${(v.conf! * 100).toFixed(0)}%`
       : "sin clasificar";
     const tw = ctx.measureText(label).width + 8;
-    ctx.fillStyle = ok ? "rgba(12,18,16,0.82)" : "rgba(30,22,6,0.82)";
+    ctx.fillStyle = v.kind === "ambulance" ? "rgba(226,72,58,0.92)" : ok ? "rgba(12,18,16,0.85)" : "rgba(30,22,6,0.85)";
     ctx.fillRect(b.x, b.y - 14, tw, 13);
-    ctx.fillStyle = ok ? PAL.detectAcc : "#eaa92b";
+    ctx.fillStyle = v.kind === "ambulance" ? "#ffffff" : ok ? PAL.detectAcc : "#eaa92b";
     ctx.fillText(label, b.x + 4, b.y - 4);
   }
   for (const p of engine.pedestrians) {
@@ -646,9 +652,9 @@ function drawAnalysis(ctx: CanvasRenderingContext2D, engine: TrafficEngine) {
     ctx.strokeRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y));
     if (p.reduced) {
       ctx.fillStyle = "rgba(10,16,24,0.85)";
-      ctx.fillRect(Math.min(a.x, b.x), Math.min(a.y, b.y) - 13, 92, 12);
+      ctx.fillRect(Math.min(a.x, b.x), Math.min(a.y, b.y) - 13, 110, 12);
       ctx.fillStyle = "#7fb8ff";
-      ctx.fillText("movilidad reducida", Math.min(a.x, b.x) + 4, Math.min(a.y, b.y) - 4);
+      ctx.fillText("Peatón Reducido 3F", Math.min(a.x, b.x) + 4, Math.min(a.y, b.y) - 4);
     }
   }
   ctx.restore();

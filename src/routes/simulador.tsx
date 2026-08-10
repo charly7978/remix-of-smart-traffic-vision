@@ -8,6 +8,7 @@ import { CounterfactualPanel } from "@/components/simulator/CounterfactualPanel"
 import { EventTimeline } from "@/components/simulator/EventTimeline";
 import { FLOW_PRESETS, FlowProfileEditor } from "@/components/simulator/FlowProfileEditor";
 import { WaitChart } from "@/components/simulator/WaitChart";
+import { PitchModeModal } from "@/components/simulator/PitchModeModal";
 import {
   APPROACH_LABEL_ES,
   DEFAULT_PRIORITY,
@@ -276,6 +277,7 @@ function SimuladorPage() {
   const [paused, setPaused] = useState(false);
   const [frames, setFrames] = useState<AuditFrame[]>([]);
   const [priority, setPriority] = useState<PriorityConfig>({ ...DEFAULT_PRIORITY });
+  const [isPitchOpen, setIsPitchOpen] = useState(false);
 
   // guion
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -450,6 +452,39 @@ function SimuladorPage() {
 
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-10">
+      {/* Modal Presentación Ejecutiva */}
+      <PitchModeModal
+        isOpen={isPitchOpen}
+        onClose={() => setIsPitchOpen(false)}
+        onSelectScene={(sceneId) => {
+          const idx = SCENES.findIndex((s) => s.id === sceneId);
+          if (idx !== -1) {
+            setMode("guiado");
+            setSceneIndex(idx);
+          }
+        }}
+      />
+
+      {/* Pitch Bar Top Banner */}
+      <div className="mb-6 rounded-2xl border border-signal-green/40 bg-gradient-to-r from-signal-green/15 via-card to-background p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal-green opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-signal-green" />
+          </span>
+          <div>
+            <span className="font-mono text-xs font-bold text-signal-green uppercase tracking-wider">MODO PRESENTACIÓN EJECUTIVA 3F</span>
+            <p className="text-xs text-muted-foreground">Proyección guiada paso a paso para la reunión institucional con autoridades del Municipio.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setIsPitchOpen(true)}
+          className="flex items-center gap-2 rounded-xl bg-signal-green px-5 py-2.5 font-mono text-xs font-bold text-background transition-all hover:bg-signal-green/90 shadow-md cursor-pointer"
+        >
+          <span>PROYECTAR PITCH 4 MINUTOS</span>
+        </button>
+      </div>
+
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.3em] text-signal-green uppercase">

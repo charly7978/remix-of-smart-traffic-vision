@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -143,6 +144,95 @@ function Note({ children }: { children: ReactNode }) {
     <p className="mt-4 max-w-3xl rounded-lg border border-border bg-secondary/40 px-4 py-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
       {children}
     </p>
+  );
+}
+
+function CalculadoraRoi3F() {
+  const [intersecciones, setIntersecciones] = useState(120);
+
+  const costoFull = 3000;
+  const costoCorporativo = 20000;
+
+  const inversion3F = intersecciones * costoFull;
+  const inversionCorporativa = intersecciones * costoCorporativo;
+  const ahorroDirecto = inversionCorporativa - inversion3F;
+  const co2EvitadoAnno = Math.round(intersecciones * 1.67);
+  const combustibleAhorrado = Math.round(intersecciones * 12500);
+
+  return (
+    <div className="my-8 rounded-2xl border border-signal-green/40 bg-card p-6 sm:p-8 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
+        <div>
+          <span className="rounded-full border border-signal-green/30 bg-signal-green/10 px-3 py-1 font-mono text-xs font-bold text-signal-green">
+            SIMULADOR FINANCIERO MUNICIPAL 3F
+          </span>
+          <h3 className="mt-3 text-2xl font-bold text-foreground">
+            Calculadora de Retorno e Inversión para Tres de Febrero
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ajuste el número de semáforos para proyectar la inversión requerida vs soluciones corporativas tradicionales.
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="font-mono text-xs text-muted-foreground uppercase">Intersecciones Seleccionadas</p>
+          <p className="font-mono text-4xl font-black text-signal-green">{intersecciones}</p>
+        </div>
+      </div>
+
+      {/* Slider Control */}
+      <div className="mt-6">
+        <div className="flex justify-between font-mono text-xs text-muted-foreground mb-2">
+          <span>10 Semáforos (Piloto Corredor)</span>
+          <span>60 Semáforos (Av. Principales)</span>
+          <span>150 Semáforos (Red Total 3F)</span>
+        </div>
+        <input
+          type="range"
+          min={10}
+          max={150}
+          step={5}
+          value={intersecciones}
+          onChange={(e) => setIntersecciones(Number(e.target.value))}
+          className="w-full h-3 bg-secondary rounded-lg appearance-none cursor-pointer accent-signal-green"
+        />
+      </div>
+
+      {/* Metrics Results Grid */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-border bg-secondary/30 p-4">
+          <p className="font-mono text-[10px] text-muted-foreground uppercase">Presupuesto Proyecto Ameghino</p>
+          <p className="mt-2 font-mono text-2xl font-bold text-signal-green">
+            USD {inversion3F.toLocaleString("es-AR")}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">USD {costoFull}/esquina hardware full</p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-secondary/30 p-4">
+          <p className="font-mono text-[10px] text-muted-foreground uppercase">Contrato Corporativo Llave en Mano</p>
+          <p className="mt-2 font-mono text-2xl font-bold text-signal-red">
+            USD {inversionCorporativa.toLocaleString("es-AR")}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">USD 20.000/esquina promedio mercado</p>
+        </div>
+
+        <div className="rounded-xl border border-signal-green/40 bg-signal-green/10 p-4">
+          <p className="font-mono text-[10px] text-signal-green uppercase font-bold">Ahorro Neto Municipal Directo</p>
+          <p className="mt-2 font-mono text-2xl font-black text-signal-green">
+            USD {ahorroDirecto.toLocaleString("es-AR")}
+          </p>
+          <p className="mt-1 text-[11px] text-foreground/80 font-medium">Capacidad de ahorro de un 85%</p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-secondary/30 p-4">
+          <p className="font-mono text-[10px] text-muted-foreground uppercase">Impacto Ambiental Anual</p>
+          <p className="mt-2 font-mono text-xl font-bold text-foreground">
+            {co2EvitadoAnno} ton CO₂
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{combustibleAhorrado.toLocaleString("es-AR")} litros de nafta/año</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -468,11 +558,13 @@ function ProyectoPage() {
         <Section
           id="costos-interseccion"
           eyebrow="Factibilidad económica"
-          title="Costos por intersección — piloto amateur/casero"
+          title="Costos por intersección y Calculadora ROI Municipal"
           lead="Se presentan dos variantes de referencia: una configuración mínima viable orientada a
           validar la lógica del sistema, y una configuración full con hardware de mayor capacidad
           de cómputo, pensada para operación sostenida en la vía pública."
         >
+          <CalculadoraRoi3F />
+
           <SubHeading>Variante mínima viable (Raspberry Pi)</SubHeading>
           <DataTable
             head={["Componente", "Especificación", "Unidad", "Costo unitario (USD)", "Subtotal (USD)"]}
