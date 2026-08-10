@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DEFAULT_DRAW_OPTIONS, drawScene, type DrawOptions } from "@/components/simulator/draw";
+import { drawScene3D } from "@/components/simulator/render3d";
+import { AuditPanel, type AuditFrame } from "@/components/simulator/AuditPanel";
+import { CounterfactualPanel } from "@/components/simulator/CounterfactualPanel";
 import { EventTimeline } from "@/components/simulator/EventTimeline";
 import { FLOW_PRESETS, FlowProfileEditor } from "@/components/simulator/FlowProfileEditor";
 import { WaitChart } from "@/components/simulator/WaitChart";
 import {
   APPROACH_LABEL_ES,
+  DEFAULT_PRIORITY,
   DEFAULT_EVENTS,
   DEFAULT_FLOW,
   KIND_LABEL_ES,
   TrafficEngine,
   WEATHER_LABEL_ES,
+  type PriorityConfig,
   type ScenarioEvent,
   type Snapshot,
   type Weather,
@@ -258,11 +263,19 @@ function SimuladorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<TrafficEngine | null>(null);
   const optsRef = useRef<DrawOptions>({ ...DEFAULT_DRAW_OPTIONS });
+  const viewRef = useRef<"3d" | "cenital">("3d");
+  const pausedRef = useRef(false);
+  const framesRef = useRef<AuditFrame[]>([]);
+  const thumbRef = useRef<HTMLCanvasElement | null>(null);
 
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [mode, setMode] = useState<"guiado" | "libre">("guiado");
   const [layers, setLayers] = useState<DrawOptions>({ ...DEFAULT_DRAW_OPTIONS });
+  const [view, setView] = useState<"3d" | "cenital">("3d");
+  const [paused, setPaused] = useState(false);
+  const [frames, setFrames] = useState<AuditFrame[]>([]);
+  const [priority, setPriority] = useState<PriorityConfig>({ ...DEFAULT_PRIORITY });
 
   // guion
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -278,6 +291,8 @@ function SimuladorPage() {
   const [startHour, setStartHour] = useState(7);
 
   optsRef.current = layers;
+  viewRef.current = view;
+  pausedRef.current = paused;
 
   useEffect(() => {
     const engine = new TrafficEngine();
@@ -301,15 +316,49 @@ function SimuladorPage() {
     let raf = 0;
     let last = performance.now();
     let acc = 0;
+    let capAcc = 0;
+    let lastDecisionId = 0;
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      engine.update(dt);
-      drawScene(ctx, engine, now, optsRef.current);
+      if (!pausedRef.current) engine.update(dt);
+      if (viewRef.current === "3d") drawScene3D(ctx, engine, now, optsRef.current);
+      else drawScene(ctx, engine, now, optsRef.current);
       acc += dt;
       if (acc > 0.2) {
         acc = 0;
         setSnap(engine.getSnapshot());
+      }
+      capAcc += dt;
+      if (!pausedRef.current && capAcc > 0.4) {
+        capAcc = 0;
+        let thumb = thumbRef.current;
+        if (!thumb) {
+          thumb = document.createElement("canvas");
+          thumb.width = 300;
+          thumb.height = 300;
+          thumbRef.current = thumb;
+        }
+        const tctx = thumb.getContext("2d");
+        const top = engine.decisions[0] ?? null;
+        if (tctx) {
+          tctx.drawImage(canvas, 0, 0, 300, 300);
+          const next: AuditFrame = {
+            i: framesRef.current.length,
+            hour: engine.hour,
+            thumb: thumb.toDataURL("image/jpeg", 0.55),
+            phase: engine.phase === "green" ? "VERDE" : engine.phase === "amber" ? "AMARILLO" : "TODO ROJO",
+            axis: engine.axis === "NS" ? "N–S" : "E–O",
+            green: engine.greenAssigned,
+            sigmaNs: engine.zoneCount("NS"),
+            sigmaEw: engine.zoneCount("EW"),
+            decision: top,
+          };
+          if (top && top.id !== lastDecisionId) lastDecisionId = top.id;
+          const buf = [...framesRef.current, next].slice(-90);
+          framesRef.current = buf;
+          setFrames(buf);
+        }
       }
       raf = requestAnimationFrame(loop);
     };
@@ -484,6 +533,9 @@ function SimuladorPage() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
+                <Toggle on={view === "3d"} onClick={() => setView(view === "3d" ? "cenital" : "3d")}>
+                  {view === "3d" ? "Vista 3D" : "Vista cenital"}
+                </Toggle>
                 <Toggle on={layers.analysis} onClick={() => toggleLayer("analysis")}>
                   Detecciones
                 </Toggle>
@@ -716,6 +768,69 @@ function SimuladorPage() {
             subtitle="Curva punteada: demora teórica de un semáforo de ciclo fijo de 90 s con la misma demanda. Curva plena: desempeño medido del controlador."
           >
             <WaitChart history={snap?.history ?? []} />
+          </Panel>
+
+          <Panel
+            title="Autonomía verificada"
+            subtitle="El sistema decide solo. Estos contadores muestran cuántas fases se resolvieron en la esquina, sin operador ni central, y con qué latencia."
+            right={
+              <span className="rounded bg-signal-green/15 px-2 py-1 font-mono text-[10px] tracking-widest text-signal-green">
+                SIN OPERADOR
+              </span>
+            }
+          >
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <Metric
+                value={`${snap?.autonomousDecisions ?? 0}`}
+                label="Fases decididas de forma autónoma"
+                tone="text-signal-green"
+              />
+              <Metric
+                value={`${snap?.humanInterventions ?? 0}`}
+                label="Intervenciones humanas requeridas"
+              />
+              <Metric
+                value={`${snap?.decisions[0]?.latencyMs ?? 0} ms`}
+                label="Latencia de la última decisión en el borde"
+              />
+              <Metric
+                value={`${((snap?.detectionRate ?? 0) * 100).toFixed(0)}%`}
+                label="Tasa de clasificación autoevaluada"
+              />
+            </div>
+            <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
+              Cada fase se resuelve dentro del gabinete de la esquina: la cámara observa, el modelo
+              de visión clasifica, el razonador propone una intención y el validador determinista la
+              acepta o la rechaza. No hay una persona mirando pantallas ni una orden que viaje a un
+              centro de control: la decisión ocurre donde ocurre el tránsito, en decenas de
+              milisegundos. La central sólo recibe la copia auditable de lo ya decidido.
+            </p>
+          </Panel>
+
+          <Panel
+            title="Comparación contrafáctica de políticas"
+            subtitle="Sobre la misma evidencia observada, modifique los parámetros de prioridad y vea exactamente cómo cambia la decisión. Es la herramienta para acordar una política pública antes de escribirla en un pliego."
+          >
+            <CounterfactualPanel
+              evidence={snap?.evidence ?? null}
+              baseConfig={priority}
+              onApply={(cfg) => {
+                setPriority(cfg);
+                engine()?.setPriority(cfg);
+                engine()?.registerHumanIntervention();
+              }}
+            />
+          </Panel>
+
+          <Panel
+            title="Auditoría fotograma a fotograma"
+            subtitle="Cada cuadro guarda la imagen que vio la cámara, el estado del cruce y —cuando hubo cambio de fase— el contrato JSON completo que el agente publicó al controlador."
+          >
+            <AuditPanel
+              frames={frames}
+              paused={paused}
+              onTogglePause={() => setPaused((p) => !p)}
+            />
           </Panel>
 
           {mode === "libre" && (

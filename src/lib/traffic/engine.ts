@@ -110,6 +110,171 @@ export interface AgentDecision {
   confidence: number;
   latencyMs: number;
   source: "vlm" | "detector" | "failsafe" | "emergency";
+  /** evidencia exacta que disparó el razonamiento */
+  evidence: Evidence;
+  /** contrato JSON publicado al controlador */
+  contract: DecisionContract;
+}
+
+/* ------------------------------------------------------------------ */
+/* Parámetros de prioridad (auditables y contrafactuales)              */
+/* ------------------------------------------------------------------ */
+
+export interface PriorityConfig {
+  /** segundos de verde por objeto válido detectado (β) */
+  beta: number;
+  /** verde mínimo de seguridad (T_seg) */
+  tSeg: number;
+  /** verde máximo por fase (T_max) */
+  tMax: number;
+  /** peso de la espera peatonal: acorta el verde vehicular */
+  pedWeight: number;
+  /** techo de verde vehicular si espera una persona con movilidad reducida */
+  reducedCap: number;
+  /** verde mínimo garantizado al corredor de emergencia */
+  emergencyMin: number;
+  /** margen de frenado agregado con calzada mojada o niebla */
+  weatherMargin: number;
+  /** tasa de clasificación mínima para confiar en la percepción */
+  visibilityFloor: number;
+}
+
+export const DEFAULT_PRIORITY: PriorityConfig = {
+  beta: 2.4,
+  tSeg: 8,
+  tMax: 42,
+  pedWeight: 1,
+  reducedCap: 16,
+  emergencyMin: 14,
+  weatherMargin: 2,
+  visibilityFloor: 0.55,
+};
+
+export const PRIORITY_FIELDS: {
+  key: keyof PriorityConfig;
+  label: string;
+  hint: string;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+}[] = [
+  {
+    key: "pedWeight",
+    label: "Prioridad peatonal",
+    hint: "Cuánto acorta el verde vehicular cada persona esperando en la senda.",
+    min: 0,
+    max: 3,
+    step: 0.1,
+    unit: "×",
+  },
+  {
+    key: "reducedCap",
+    label: "Techo con movilidad reducida",
+    hint: "Verde vehicular máximo cuando espera una persona con movilidad reducida.",
+    min: 8,
+    max: 30,
+    step: 1,
+    unit: "s",
+  },
+  {
+    key: "emergencyMin",
+    label: "Corredor de emergencia",
+    hint: "Verde mínimo garantizado al eje por el que circula la ambulancia.",
+    min: 8,
+    max: 30,
+    step: 1,
+    unit: "s",
+  },
+  {
+    key: "weatherMargin",
+    label: "Sensibilidad al clima",
+    hint: "Segundos extra de frenado con calzada mojada o niebla.",
+    min: 0,
+    max: 8,
+    step: 0.5,
+    unit: "s",
+  },
+  {
+    key: "visibilityFloor",
+    label: "Umbral de visibilidad",
+    hint: "Tasa de clasificación por debajo de la cual el sistema deja de confiar en sí mismo.",
+    min: 0.3,
+    max: 0.85,
+    step: 0.01,
+    unit: "",
+  },
+  {
+    key: "beta",
+    label: "Ganancia β",
+    hint: "Segundos de verde asignados por cada objeto válido en cola.",
+    min: 1,
+    max: 5,
+    step: 0.1,
+    unit: "s/obj",
+  },
+];
+
+/** Evidencia observada en el borde en el instante de decidir */
+export interface Evidence {
+  hour: number;
+  axis: Axis;
+  sigma: number;
+  sigmaOther: number;
+  queue: number;
+  missed: number;
+  pedWaiting: number;
+  pedWaitingOther: number;
+  reducedWaiting: boolean;
+  weather: Weather;
+  visibility: number;
+  detectionRate: number;
+  night: boolean;
+  cameraOffline: boolean;
+  emergencyApproach: Approach | null;
+  demand: number;
+}
+
+export interface DecisionContract {
+  schema: "ameghino.decision.v1";
+  intersection_id: string;
+  local_time: string;
+  phase_request: {
+    axis: Axis;
+    green_s: number;
+    min_green_s: number;
+    amber_s: number;
+    all_red_s: number;
+  };
+  evidence: Evidence;
+  priority_profile: PriorityConfig;
+  model: {
+    perception: string;
+    reasoner: string;
+    latency_ms: number;
+  };
+  confidence: number;
+  source: AgentDecision["source"];
+  rationale: string;
+  validator: {
+    min_green_ok: boolean;
+    max_green_ok: boolean;
+    conflicting_green: boolean;
+    interlock: "hardware+software";
+    accepted: boolean;
+  };
+  human_in_the_loop: false;
+}
+
+export interface DecisionResult {
+  axis: Axis;
+  seconds: number;
+  source: AgentDecision["source"];
+  confidence: number;
+  rationale: string;
+  action: string;
+  latencyMs: number;
+  contract: DecisionContract;
 }
 
 export interface Pedestrian {
@@ -162,6 +327,10 @@ export interface Snapshot {
   decisions: AgentDecision[];
   pedWaiting: number;
   pedCrossing: number;
+  config: PriorityConfig;
+  evidence: Evidence;
+  autonomousDecisions: number;
+  humanInterventions: number;
 }
 
 const KIND_LABEL: Record<VehicleKind, string> = {
@@ -199,9 +368,9 @@ export const DEFAULT_EVENTS: ScenarioEvent[] = [
 const AMBER_TIME = 3;
 const ALL_RED_TIME = 1.2;
 const FIXED_CYCLE_GREEN = 22;
-const BETA = 2.4;
-const T_SEG = 8;
-const T_MAX = 42;
+
+const PERCEPTION_MODEL = "YOLOv11-s TensorRT INT8 @ Jetson Orin Nano";
+const REASONER_MODEL = "Qwen2.5-VL-3B INT4 (borde) + validador determinista";
 
 /** capacidad práctica de la intersección (veh/h, ambos ejes) */
 const CAPACITY = 3200;
@@ -229,10 +398,124 @@ export function fixedCycleDelay(flowVehH: number): number {
 
 const APPROACHES: Approach[] = ["N", "S", "E", "W"];
 
+function clockLabel(hour: number): string {
+  const h = Math.floor(hour) % 24;
+  const m = Math.floor((hour % 1) * 60);
+  const s = Math.floor((((hour % 1) * 60) % 1) * 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+const AXIS_LABEL: Record<Axis, string> = { NS: "Norte–Sur", EW: "Este–Oeste" };
+
+/**
+ * Núcleo de decisión, puro y determinista respecto de (evidencia, perfil de prioridades).
+ * Se usa tanto en vivo como para las comparaciones contrafactuales de la auditoría.
+ */
+export function decide(ev: Evidence, cfg: PriorityConfig): DecisionResult {
+  const ax = ev.axis;
+  const other = ax === "NS" ? "EW" : "NS";
+  const axLabel = AXIS_LABEL[ax];
+  const otherLabel = AXIS_LABEL[other as Axis];
+  const failSafe = ev.cameraOffline || ev.detectionRate < cfg.visibilityFloor;
+
+  let g: number;
+  let source: AgentDecision["source"] = "vlm";
+  let confidence: number;
+  let rationale: string;
+
+  if (failSafe) {
+    g = FIXED_CYCLE_GREEN;
+    source = "failsafe";
+    confidence = 1;
+    rationale = ev.cameraOffline
+      ? "Sin señal de video verificable. El validador bloquea toda decisión de la IA y ejecuta el plan fijo pregrabado de 22 s por eje."
+      : `La tasa de clasificación (${(ev.detectionRate * 100).toFixed(0)}%) cayó por debajo del umbral configurado (${(cfg.visibilityFloor * 100).toFixed(0)}%). Se descarta la percepción y se ejecuta el plan fijo pregrabado.`;
+  } else {
+    g = Math.min(cfg.tMax, Math.max(cfg.tSeg, 4 + cfg.beta * ev.sigma));
+    if (ev.weather !== "clear") g += cfg.weatherMargin;
+    if (ev.pedWaitingOther > 0 && cfg.pedWeight > 0) {
+      g = Math.max(cfg.tSeg, g - ev.pedWaitingOther * cfg.pedWeight * 2);
+    }
+    if (ev.reducedWaiting) g = Math.min(g, cfg.reducedCap);
+    confidence = Math.min(0.98, 0.6 + ev.visibility * 0.38);
+
+    if (ev.night && ev.sigma <= 2) {
+      rationale = `Madrugada: sólo ${ev.sigma} vehículo(s) sobre ${axLabel} y cruce despejado. Se libera el verde de inmediato para no dejar al conductor detenido y expuesto.`;
+    } else if (ev.reducedWaiting) {
+      rationale = `Peatón con movilidad reducida esperando en la senda de ${otherLabel}. El verde de ${axLabel} se acota a ${g.toFixed(0)} s (techo configurado ${cfg.reducedCap} s) para habilitar el cruce con tiempo extendido.`;
+    } else if (ev.sigma >= 10) {
+      rationale = `Cola saturada en ${axLabel} (σ=${ev.sigma} objetos válidos) contra ${ev.sigmaOther} en ${otherLabel}. Se extiende el verde a ${g.toFixed(0)} s, con techo T_max de ${cfg.tMax} s.`;
+    } else if (ev.pedWaitingOther > 0) {
+      rationale = `${ev.pedWaitingOther} peatón(es) en espera sobre ${otherLabel}, con peso de prioridad ${cfg.pedWeight.toFixed(1)}×. Verde de ${axLabel} dimensionado en ${g.toFixed(0)} s: se atiende la cola sin castigar el cruce peatonal.`;
+    } else if (ev.weather !== "clear") {
+      rationale = `Calzada con ${WEATHER_LABEL_ES[ev.weather].toLowerCase()}: σ=${ev.sigma} con confianza degradada. Se agrega margen de frenado de ${cfg.weatherMargin} s y se asignan ${g.toFixed(0)} s de verde a ${axLabel}.`;
+    } else {
+      rationale = `Demanda equilibrada: σ=${ev.sigma} en ${axLabel} contra ${ev.sigmaOther} en ${otherLabel}. Verde proporcional de ${g.toFixed(0)} s según T_v = max(T_seg, min(T_max, β·σ)) con β=${cfg.beta.toFixed(1)}.`;
+    }
+  }
+
+  if (ev.emergencyApproach && axisOf(ev.emergencyApproach) === ax) {
+    g = Math.max(g, cfg.emergencyMin);
+    source = "emergency";
+    confidence = 0.99;
+    rationale = `Vehículo de emergencia identificado en el acceso ${APPROACH_LABEL_ES[ev.emergencyApproach]} (silueta + baliza). Se abre corredor prioritario sobre ${axLabel} y se sostiene el verde ${g.toFixed(0)} s hasta liberar la intersección.`;
+  }
+
+  g = Math.round(g * 10) / 10;
+  const latencyMs = Math.round(42 + (ev.weather === "clear" ? 0 : 14) + (1 - ev.visibility) * 30);
+
+  const contract: DecisionContract = {
+    schema: "ameghino.decision.v1",
+    intersection_id: "AR-BA-3F-0142",
+    local_time: clockLabel(ev.hour),
+    phase_request: {
+      axis: ax,
+      green_s: g,
+      min_green_s: cfg.tSeg,
+      amber_s: AMBER_TIME,
+      all_red_s: ALL_RED_TIME,
+    },
+    evidence: ev,
+    priority_profile: cfg,
+    model: {
+      perception: PERCEPTION_MODEL,
+      reasoner: source === "failsafe" ? "descartado (fail-safe)" : REASONER_MODEL,
+      latency_ms: latencyMs,
+    },
+    confidence,
+    source,
+    rationale,
+    validator: {
+      min_green_ok: g >= cfg.tSeg,
+      max_green_ok: g <= cfg.tMax + cfg.weatherMargin,
+      conflicting_green: false,
+      interlock: "hardware+software",
+      accepted: true,
+    },
+    human_in_the_loop: false,
+  };
+
+  return {
+    axis: ax,
+    seconds: g,
+    source,
+    confidence,
+    rationale,
+    action: `VERDE ${ax === "NS" ? "N–S" : "E–O"} · ${g.toFixed(0)} s`,
+    latencyMs,
+    contract,
+  };
+}
+
 export class TrafficEngine {
   vehicles: Vehicle[] = [];
   pedestrians: Pedestrian[] = [];
   decisions: AgentDecision[] = [];
+  config: PriorityConfig = { ...DEFAULT_PRIORITY };
+  /** decisiones tomadas sin intervención humana */
+  autonomousDecisions = 0;
+  /** intervenciones humanas sobre el plan semafórico */
+  humanInterventions = 0;
   detections: Detection[] = [];
   log: LogEntry[] = [];
   history: HistoryPoint[] = [];
@@ -316,6 +599,14 @@ export class TrafficEngine {
     this.firedEvents.clear();
   }
 
+  setPriority(patch: Partial<PriorityConfig>) {
+    this.config = { ...this.config, ...patch };
+  }
+
+  registerHumanIntervention() {
+    this.humanInterventions += 1;
+  }
+
   setCameraOffline(value: boolean) {
     if (this.cameraOffline === value) return;
     this.cameraOffline = value;
@@ -351,12 +642,13 @@ export class TrafficEngine {
   }
 
   get failSafe(): boolean {
-    return this.cameraOffline || this.detectionRate < 0.55;
+    return this.cameraOffline || this.detectionRate < this.config.visibilityFloor;
   }
 
   get failSafeReason(): string | null {
     if (this.cameraOffline) return "Sin señal de video";
-    if (this.detectionRate < 0.55) return "Percepción degradada por clima";
+    if (this.detectionRate < this.config.visibilityFloor)
+      return "Percepción degradada por clima";
     return null;
   }
 
@@ -483,7 +775,7 @@ export class TrafficEngine {
 
   private pushDecision(d: Omit<AgentDecision, "id" | "hour">) {
     this.decisions.unshift({ ...d, id: this.nextDecisionId++, hour: this.hour });
-    if (this.decisions.length > 14) this.decisions.pop();
+    if (this.decisions.length > 40) this.decisions.pop();
   }
 
   private runEvents(prevHour: number, nowHour: number) {
@@ -643,61 +935,47 @@ export class TrafficEngine {
 
   /** T_v = max(T_seg, min(T_max, β · σ)) */
   private assignGreen(ax: Axis) {
-    let g: number;
-    let source: AgentDecision["source"] = "vlm";
-    let rationale = "";
-    let confidence = 0.9;
-    if (this.failSafe) {
-      g = FIXED_CYCLE_GREEN;
-      source = "failsafe";
-      confidence = 1;
-      rationale = this.cameraOffline
-        ? "Sin señal de video verificable. El validador bloquea toda decisión de la IA y ejecuta el plan fijo pregrabado de 22 s por eje."
-        : "La tasa de clasificación cayó por debajo del 55% por baja visibilidad. Se descarta la percepción y se ejecuta el plan fijo pregrabado.";
-    } else {
-      const sigma = this.perceivedCount(ax);
-      g = Math.min(T_MAX, Math.max(T_SEG, 4 + BETA * sigma));
-      if (this.weather !== "clear") g += 2; // margen por frenado en calzada húmeda
-      const other = this.perceivedCount(opposite(ax));
-      const peds = this.pedWaitingOn(opposite(ax));
-      const reduced = this.pedestrians.some(
-        (p) => p.waiting && p.reduced && p.crossAxis === opposite(ax),
-      );
-      if (reduced) g = Math.min(g, 16);
-      confidence = Math.min(0.98, 0.6 + this.visibility * 0.38);
-      const axLabel = ax === "NS" ? "Norte–Sur" : "Este–Oeste";
-      const otherLabel = ax === "NS" ? "Este–Oeste" : "Norte–Sur";
-      if (this.night && sigma <= 2) {
-        rationale = `Madrugada: sólo ${sigma} vehículo(s) sobre ${axLabel} y cruce despejado. Se libera el verde de inmediato para no dejar al conductor detenido y expuesto.`;
-      } else if (reduced) {
-        rationale = `Peatón con movilidad reducida esperando en la senda de ${otherLabel}. El verde de ${axLabel} se acota a ${g.toFixed(0)} s para habilitar el cruce con tiempo extendido.`;
-      } else if (sigma >= 10) {
-        rationale = `Cola saturada en ${axLabel} (σ=${sigma} objetos válidos) contra ${other} en ${otherLabel}. Se extiende el verde a ${g.toFixed(0)} s, con techo T_max de ${T_MAX} s.`;
-      } else if (peds > 0) {
-        rationale = `${peds} peatón(es) en espera sobre ${otherLabel}. Verde de ${axLabel} dimensionado en ${g.toFixed(0)} s: se atiende la cola sin castigar el cruce peatonal.`;
-      } else if (this.weather !== "clear") {
-        rationale = `Calzada con ${WEATHER_LABEL_ES[this.weather].toLowerCase()}: σ=${sigma} con confianza degradada. Se agrega margen de frenado y se asignan ${g.toFixed(0)} s de verde a ${axLabel}.`;
-      } else {
-        rationale = `Demanda equilibrada: σ=${sigma} en ${axLabel} contra ${other} en ${otherLabel}. Verde proporcional de ${g.toFixed(0)} s según T_v = max(T_seg, min(T_max, β·σ)).`;
-      }
-    }
-    if (this.emergencyApproach && axisOf(this.emergencyApproach) === ax) {
-      g = Math.max(g, 14);
-      source = "emergency";
-      confidence = 0.99;
-      rationale = `Vehículo de emergencia identificado en el acceso ${APPROACH_LABEL_ES[this.emergencyApproach]} (silueta + baliza). Se abre corredor prioritario sobre ${ax === "NS" ? "Norte–Sur" : "Este–Oeste"} y se sostiene el verde ${g.toFixed(0)} s hasta liberar la intersección.`;
-    }
-    this.greenAssigned = g;
-    this.tv[ax] = g;
+    const evidence = this.buildEvidence(ax);
+    const result = decide(evidence, this.config);
+    this.greenAssigned = result.seconds;
+    this.tv[ax] = result.seconds;
+    this.autonomousDecisions += 1;
     this.pushDecision({
       axis: ax,
-      seconds: g,
-      action: `VERDE ${ax === "NS" ? "N–S" : "E–O"} · ${g.toFixed(0)} s`,
-      rationale,
-      confidence,
-      latencyMs: Math.round(38 + Math.random() * 26 + (this.weather === "clear" ? 0 : 12)),
-      source,
+      seconds: result.seconds,
+      action: result.action,
+      rationale: result.rationale,
+      confidence: result.confidence,
+      latencyMs: result.latencyMs,
+      source: result.source,
+      evidence,
+      contract: result.contract,
     });
+  }
+
+  /** Fotografía del estado observado por el borde en este instante */
+  buildEvidence(ax: Axis = this.axis): Evidence {
+    const other = opposite(ax);
+    return {
+      hour: this.hour,
+      axis: ax,
+      sigma: this.perceivedCount(ax),
+      sigmaOther: this.perceivedCount(other),
+      queue: this.queueCount(ax),
+      missed: this.vehicles.filter((v) => v.missed && !v.crossed).length,
+      pedWaiting: this.pedWaitingOn(ax),
+      pedWaitingOther: this.pedWaitingOn(other),
+      reducedWaiting: this.pedestrians.some(
+        (p) => p.waiting && p.reduced && p.crossAxis === other,
+      ),
+      weather: this.weather,
+      visibility: this.visibility,
+      detectionRate: this.detectionRate,
+      night: this.night,
+      cameraOffline: this.cameraOffline,
+      emergencyApproach: this.emergencyApproach,
+      demand: this.demand,
+    };
   }
 
   private updateFeed(dt: number) {
@@ -788,6 +1066,10 @@ export class TrafficEngine {
       decisions: [...this.decisions],
       pedWaiting: this.pedWaiting,
       pedCrossing: this.pedCrossing,
+      config: { ...this.config },
+      evidence: this.buildEvidence(this.axis),
+      autonomousDecisions: this.autonomousDecisions,
+      humanInterventions: this.humanInterventions,
     };
   }
 }
