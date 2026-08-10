@@ -39,3 +39,4 @@ venv/
 *.onnx
 *.jsonl
 
+server/evidence_logs/evidence.jsonl
