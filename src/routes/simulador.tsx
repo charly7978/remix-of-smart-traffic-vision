@@ -311,16 +311,18 @@ function SimuladorPage() {
   }, [sourceMode, realFrame]);
 
   const handleRealFrame = useCallback((frame: DetectionFrame) => {
+    if (!frame) return;
     setRealFrame(frame);
     const engine = engineRef.current;
     if (!engine) return;
-    engine.setHour(frame.hour);
-    const weather: Weather = frame.weather === "fog" ? "fog" : frame.weather === "rain" ? "rain" : "clear";
+    engine.setHour(frame.hour ?? 12);
+    const w = frame.weather ?? "clear";
+    const weather: Weather = w === "fog" ? "fog" : w === "rain" ? "rain" : "clear";
     engine.setWeather(weather, true);
     engine.setCameraOffline(false);
-    const laneDensity = frame.laneDensity || {};
-    const ns = laneDensity["NS"] || 0;
-    const ew = laneDensity["EW"] || 0;
+    const ld = frame.laneDensity ?? {};
+    const ns = ld["NS"] ?? 0;
+    const ew = ld["EW"] ?? 0;
     if (ns + ew > 0) {
       engine.setNsShare(ns / (ns + ew));
     }

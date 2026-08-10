@@ -84,7 +84,11 @@ export function RealCameraPanel({
     setStatus("live");
     setError(null);
     setLastFrame(frame);
-    onFrame(frame);
+    try {
+      onFrame(frame);
+    } catch (err) {
+      console.error("Error in onFrame callback:", err);
+    }
   };
 
   const handleSnapshot = async () => {
