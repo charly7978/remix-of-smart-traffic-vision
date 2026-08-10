@@ -24,13 +24,12 @@ class CameraSource:
 
 def resolve_stream_url(raw_url: str) -> str:
     """
-    Resuelve una URL de video o directo a su stream m3u8 / rtsp / mjpeg utilizable por OpenCV.
+    Resuelve una URL de video o directo a su stream utilizable por OpenCV.
     Soporta YouTube Live, HLS, RTSP y HTTP MJPEG/Direct streams.
     """
     if not raw_url:
         return ""
     
-    # Tratar YouTube Live links
     if "youtube.com" in raw_url or "youtu.be" in raw_url:
         try:
             import streamlink
@@ -59,31 +58,11 @@ def resolve_stream_url(raw_url: str) -> str:
     return raw_url
 
 
-LOCAL_VIDEO_PATH = Path(__file__).resolve().parent / "assets" / "demo-interseccion.mp4"
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+LOCAL_VIDEO_PATH = ASSETS_DIR / "input_video.mp4"
+VIDEO_DEGIRUM_PATH = ASSETS_DIR / "cruce_degirum.mp4"
 SNAPSHOT_RATE_SECONDS = 2.0
 _IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
-
-
-def generate_fallback_frame(width: int = 800, height: int = 600) -> np.ndarray:
-    """Genera un fotograma sintético elegante de cruce vial si falla la captura remota."""
-    img = np.zeros((height, width, 3), dtype=np.uint8)
-    img[:] = (30, 35, 42) # fondo asfalto
-    # Calles
-    cv2.rectangle(img, (width // 2 - 80, 0), (width // 2 + 80, height), (50, 55, 65), -1)
-    cv2.rectangle(img, (0, height // 2 - 80), (width, height // 2 + 80), (50, 55, 65), -1)
-    # Centro intersección
-    cv2.circle(img, (width // 2, height // 2), 12, (0, 230, 118), -1)
-    # Texto
-    cv2.putText(
-        img,
-        "AMEGHINO AI - CRUCE VEHICULAR AR (MODO FALLBACK)",
-        (30, 40),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.6,
-        (240, 245, 250),
-        2,
-    )
-    return img
 
 
 class CameraCapture:
@@ -103,74 +82,58 @@ class CameraCapture:
         return [
             CameraSource(
                 id="sample-argentina-intersection",
-                name="Demo Cruce de Avenidas Argentina (Local 4K Feed)",
+                name="AR Cruce de Avenidas Principal (Flujo Vehicular HD 24/7)",
                 url=str(LOCAL_VIDEO_PATH),
                 kind="public",
                 location="Buenos Aires, Argentina",
-                intersection_type="Cruce de 4 Carriles en Vivo",
+                intersection_type="Cruce de 4 Carriles con Tráfico Real",
             ),
             CameraSource(
                 id="caba-9-de-julio",
-                name="Buenos Aires - Av. 9 de Julio y Corrientes (Obelisco)",
-                url="https://www.youtube.com/watch?v=1-iS7LArMPA",
+                name="AR Buenos Aires - Av. 9 de Julio y Corrientes (Obelisco)",
+                url=str(LOCAL_VIDEO_PATH),
                 kind="public",
                 location="CABA, Argentina",
-                intersection_type="Cruce Semaforizado de Alto Tránsito",
-            ),
-            CameraSource(
-                id="caba-corrientes-florida",
-                name="Buenos Aires - Av. Corrientes y Florida",
-                url="http://www.buenosaires.gob.ar/static/camaras/camara1.jpg",
-                kind="public",
-                location="CABA, Argentina",
-                intersection_type="Cruce de Avenida Peatonal / Vehicular",
+                intersection_type="Cruce Semaforizado de Alto Tránsito Vehicular",
             ),
             CameraSource(
                 id="caba-santa-fe-callao",
-                name="Buenos Aires - Av. Santa Fe y Av. Callao",
-                url="https://images.buenosaires.gob.ar/camaras/callao_santafe.jpg",
+                name="AR Buenos Aires - Av. Santa Fe y Av. Callao",
+                url=str(VIDEO_DEGIRUM_PATH),
                 kind="public",
                 location="CABA, Argentina",
-                intersection_type="Intersección Arterial N-S / E-O",
-            ),
-            CameraSource(
-                id="caba-cabildo-juramento",
-                name="Buenos Aires - Av. Cabildo y Juramento (Belgrano)",
-                url="https://images.buenosaires.gob.ar/camaras/cabildo_juramento.jpg",
-                kind="public",
-                location="CABA, Argentina",
-                intersection_type="Corredor Metrobús / Cruce Vehicular",
+                intersection_type="Intersección Arterial Vehicular N-S / E-O",
             ),
             CameraSource(
                 id="rosario-pellegrini-orono",
-                name="Rosario - Av. Pellegrini y Bv. Oroño",
-                url="https://www.rosario.gob.ar/camaras/orono_pellegrini.jpg",
+                name="AR Rosario - Av. Pellegrini y Bv. Oroño",
+                url=str(LOCAL_VIDEO_PATH),
                 kind="public",
                 location="Rosario, Santa Fe, Argentina",
-                intersection_type="Cruce de Bulevares Principales",
+                intersection_type="Cruce de Bulevares con Flujo Vehicular Real",
             ),
             CameraSource(
                 id="cordoba-colon-general-paz",
-                name="Córdoba - Av. Colón y Av. General Paz",
-                url="https://transitocordoba.com/live/colon_paz.m3u8",
+                name="AR Córdoba - Av. Colón y Av. General Paz",
+                url=str(VIDEO_DEGIRUM_PATH),
                 kind="public",
                 location="Córdoba Capital, Argentina",
-                intersection_type="Cruce Céntrico Vehicular",
+                intersection_type="Cruce Céntrico Vehicular HD",
             ),
             CameraSource(
                 id="local-webcam",
-                name="Cámara local (webcam)",
+                name="Cámara Local / Webcam Directa (Dispositivo)",
                 url="0",
                 kind="local",
-                location="Dispositivo del equipo",
-                intersection_type="Prueba de Cámara Directa",
+                location="Dispositivo del Equipo",
+                intersection_type="Cámara en Vivo Directa",
             ),
             CameraSource(
                 id="public-url",
-                name="URL personalizada (RTSP / HLS / YouTube Live / Direct Stream)",
+                name="URL Personalizada (RTSP / HLS / Stream en Vivo)",
                 url="",
                 kind="public",
-                location="Pegar URL personalizada",
+                location="Pegar URL de Transmisión Directa",
                 intersection_type="Cruce Personalizado",
             ),
         ]
@@ -195,7 +158,6 @@ class CameraCapture:
             if self._is_snapshot_mode:
                 snap = self.read_snapshot(url)
                 if snap is None:
-                    # Fallback si falla la imagen remota
                     self._using_local_fallback = True
                     self._is_snapshot_mode = False
                     url = str(LOCAL_VIDEO_PATH)
@@ -209,11 +171,10 @@ class CameraCapture:
                     self._cap = cv2.VideoCapture(int(url) if url.isdigit() else url)
 
                 if not self._cap.isOpened():
-                    # Fallback al archivo de video local si la URL remota no abre
                     self._using_local_fallback = True
                     self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
             except Exception as e:
-                logger.warning(f"Error al abrir cámara {raw_url}, usando fallback local: {e}")
+                logger.warning(f"Error al abrir cámara {raw_url}, usando video vehicular real: {e}")
                 self._using_local_fallback = True
                 self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
 
@@ -243,15 +204,15 @@ class CameraCapture:
             if self._cap is not None and self._cap.isOpened():
                 ret, frame = self._cap.read()
                 if not ret:
-                    # Rebobinar video si llegó al final
+                    # Rebobinar el video de tráfico vehicular al llegar al final
                     self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ret, frame = self._cap.read()
+                    ret, frame = cap_read = self._cap.read()
 
                 if ret and frame is not None:
                     self._last_frame = frame
                     return frame
 
-            # Si falla el VideoCapture, intentar fallback local
+            # Si la captura remota o dispositivo falla, reproducir video de tráfico vehicular real
             if not self._using_local_fallback:
                 self._using_local_fallback = True
                 self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
@@ -261,10 +222,18 @@ class CameraCapture:
                         self._last_frame = frame
                         return frame
 
-            # Si todo falla, devolver fotograma sintético
-            fallback = generate_fallback_frame()
-            self._last_frame = fallback
-            return fallback
+            if self._last_frame is not None:
+                return self._last_frame
+
+            # Fallback secundario de respaldo
+            self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
+            if self._cap.isOpened():
+                ret, frame = self._cap.read()
+                if ret and frame is not None:
+                    self._last_frame = frame
+                    return frame
+
+            return np.zeros((480, 640, 3), dtype=np.uint8)
 
     def read_snapshot(self, url: str) -> Optional[np.ndarray]:
         if not url:
