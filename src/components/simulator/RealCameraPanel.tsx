@@ -11,12 +11,23 @@ export function RealCameraPanel({
   onSelectCamera?: (cameraId: string) => void;
 }) {
   const [cameras, setCameras] = useState<CameraSource[]>([]);
-  const [cameraId, setCameraId] = useState<string>("caba-9-de-julio");
+  const [cameraId, setCameraId] = useState<string>("sample-argentina-intersection");
   const [customUrl, setCustomUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "connecting" | "live" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastFrame, setLastFrame] = useState<DetectionFrame | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+
+  const handleFrame = (frame: DetectionFrame) => {
+    setStatus("live");
+    setError(null);
+    setLastFrame(frame);
+    try {
+      onFrame(frame);
+    } catch (err) {
+      console.error("Error in onFrame callback:", err);
+    }
+  };
 
   const fetchCameras = () => {
     setStatus("connecting");
@@ -28,6 +39,8 @@ export function RealCameraPanel({
           const first = cams[0]!.id;
           setCameraId(first);
           onSelectCamera?.(first);
+          // Cargar automáticamente el primer fotograma en vivo
+          detectNow(first).then(handleFrame).catch(() => {});
         }
         setStatus("idle");
       })
@@ -62,6 +75,15 @@ export function RealCameraPanel({
     setCameraId(newId);
     setError(null);
     onSelectCamera?.(newId);
+    setSnapshotLoading(true);
+    detectNow(newId)
+      .then(handleFrame)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Error al cargar la cámara");
+      })
+      .finally(() => {
+        setSnapshotLoading(false);
+      });
   };
 
   const handleApplyCustomUrl = async () => {
@@ -71,23 +93,15 @@ export function RealCameraPanel({
     try {
       await setCameraUrl(customUrl.trim());
       onSelectCamera?.("public-url");
+      setCameraId("public-url");
       setStatus("connecting");
+      const frame = await detectNow("public-url");
+      handleFrame(frame);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar URL personalizada");
       setStatus("error");
     } finally {
       setSnapshotLoading(false);
-    }
-  };
-
-  const handleFrame = (frame: DetectionFrame) => {
-    setStatus("live");
-    setError(null);
-    setLastFrame(frame);
-    try {
-      onFrame(frame);
-    } catch (err) {
-      console.error("Error in onFrame callback:", err);
     }
   };
 
@@ -158,9 +172,9 @@ export function RealCameraPanel({
           type="button"
           onClick={handleSnapshot}
           disabled={snapshotLoading}
-          className="h-9 rounded-md bg-secondary border border-border px-3 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-accent disabled:opacity-60"
+          className="h-9 rounded-md bg-emerald-600 border border-emerald-500/50 px-4 text-xs font-bold text-white transition-colors hover:bg-emerald-500 shadow-md shadow-emerald-950/50 disabled:opacity-60"
         >
-          {snapshotLoading ? "Procesando..." : "Snapshot Rápido"}
+          {snapshotLoading ? "Analizando Cámara..." : "Probar Detección En Vivo"}
         </button>
       </div>
 
@@ -187,6 +201,26 @@ export function RealCameraPanel({
           </div>
         )}
       </div>
+
+      {/* Visor de Video de la Cámara en Vivo directamente en el Panel */}
+      {lastFrame?.rawImage && (
+        <div className="relative overflow-hidden rounded-xl border border-emerald-500/40 bg-black/80 shadow-2xl">
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 rounded-md bg-black/80 px-3 py-1.5 backdrop-blur-md border border-emerald-500/30">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            </span>
+            <span className="font-mono text-[11px] font-bold tracking-wider text-emerald-400 uppercase">
+              FEED EN VIVO DE CÁMARA (PROCESADO POR AMEGHINO AI & YOLO)
+            </span>
+          </div>
+          <img
+            src={`data:image/jpeg;base64,${lastFrame.rawImage}`}
+            alt="Feed en vivo de la cámara de la intersección"
+            className="w-full max-h-[480px] object-contain bg-slate-950"
+          />
+        </div>
+      )}
 
       {metrics && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
