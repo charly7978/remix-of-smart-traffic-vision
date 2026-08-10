@@ -327,6 +327,10 @@ export interface Snapshot {
   decisions: AgentDecision[];
   pedWaiting: number;
   pedCrossing: number;
+  config: PriorityConfig;
+  evidence: Evidence;
+  autonomousDecisions: number;
+  humanInterventions: number;
 }
 
 const KIND_LABEL: Record<VehicleKind, string> = {
