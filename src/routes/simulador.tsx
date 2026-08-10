@@ -580,6 +580,7 @@ function SimuladorPage() {
         <div className="mt-4">
           <RealCameraPanel
             onFrame={handleRealFrame}
+            onSelectCamera={(id) => setCameraId(id)}
           />
         </div>
       )}

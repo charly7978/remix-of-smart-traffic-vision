@@ -6,6 +6,16 @@ export type CameraSource = {
   url: string;
   kind: "public" | "local" | "upload";
   location?: string;
+  intersection_type?: string;
+};
+
+export type DecisionPayload = {
+  action: string;
+  seconds: number;
+  axis: string;
+  confidence: number;
+  rationale: string;
+  contract: string;
 };
 
 export type DetectionFrame = {
@@ -28,6 +38,7 @@ export type DetectionFrame = {
   laneDensity: Record<string, number>;
   emergencyDetected: boolean;
   rawImage: string | null;
+  decision?: DecisionPayload;
 };
 
 export async function listCameras(): Promise<CameraSource[]> {
@@ -39,7 +50,11 @@ export async function listCameras(): Promise<CameraSource[]> {
 export async function detectNow(cameraId: string): Promise<DetectionFrame> {
   const res = await fetch(`${VISION_BASE}/api/detect?camera_id=${encodeURIComponent(cameraId)}`);
   if (!res.ok) throw new Error("No se pudo ejecutar la detección");
-  return res.json();
+  const data = await res.json();
+  return {
+    ...data,
+    rawImage: data.image || data.raw_image || data.rawImage || null,
+  };
 }
 
 export async function setCameraUrl(url: string): Promise<{ ok: boolean }> {
@@ -65,7 +80,11 @@ export function connectCameraStream(
         onError(new Error(data.error));
         return;
       }
-      onFrame(data as DetectionFrame);
+      const frame: DetectionFrame = {
+        ...data,
+        rawImage: data.image || data.raw_image || data.rawImage || null,
+      };
+      onFrame(frame);
     } catch (err) {
       onError(err as Error);
     }

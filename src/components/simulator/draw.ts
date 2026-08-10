@@ -956,6 +956,210 @@ function drawHud(ctx: CanvasRenderingContext2D, engine: TrafficEngine, nowMs: nu
 
 /* ------------------------------------------------------------------ */
 
+function drawAugmentedRealSignals(
+  ctx: CanvasRenderingContext2D,
+  engine: TrafficEngine,
+  nowMs: number,
+) {
+  ctx.save();
+
+  const isNsGreen = engine.axis === "NS" && engine.phase === "green";
+  const isNsAmber = engine.axis === "NS" && engine.phase === "amber";
+  const isNsRed = !isNsGreen && !isNsAmber;
+
+  const isEwGreen = engine.axis === "EW" && engine.phase === "green";
+  const isEwAmber = engine.axis === "EW" && engine.phase === "amber";
+  const isEwRed = !isEwGreen && !isEwAmber;
+
+  const countdown = Math.max(0, Math.ceil(engine.phaseTimer));
+
+  // --- SEMÁFORO VIRTUAL OVERLAY 1: EJE NORTE-SUR (Izquierda) ---
+  const leftX = 24;
+  const topY = 64;
+  const boxW = 160;
+  const boxH = 210;
+
+  ctx.fillStyle = "rgba(10,14,23,0.85)";
+  ctx.strokeStyle = isNsGreen ? "#3fbf74" : isNsAmber ? "#e9a92c" : "rgba(224,72,60,0.6)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(leftX, topY, boxW, boxH, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  // Header Eje N-S
+  ctx.font = "bold 11px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "rgba(240,244,250,0.95)";
+  ctx.fillText("SEMÁFORO N–S", leftX + 14, topY + 24);
+
+  ctx.font = "9px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "rgba(180,195,215,0.75)";
+  ctx.fillText(`Vehículos N-S: ${engine.zoneCount("NS")}`, leftX + 14, topY + 38);
+
+  // Cuerpo de Lámparas (Rojo, Amarillo, Verde)
+  const lampX = leftX + boxW / 2;
+  const redY = topY + 65;
+  const ambY = topY + 105;
+  const grnY = topY + 145;
+  const radius = 14;
+
+  // Lámpara Roja
+  ctx.beginPath();
+  ctx.arc(lampX, redY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isNsRed ? "#ff4d4d" : "rgba(80,20,20,0.4)";
+  ctx.fill();
+  if (isNsRed) {
+    ctx.shadowColor = "#ff4d4d";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(lampX, redY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Lámpara Amarilla
+  ctx.beginPath();
+  ctx.arc(lampX, ambY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isNsAmber ? "#ffcc00" : "rgba(80,70,20,0.4)";
+  ctx.fill();
+  if (isNsAmber) {
+    ctx.shadowColor = "#ffcc00";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(lampX, ambY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Lámpara Verde
+  ctx.beginPath();
+  ctx.arc(lampX, grnY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isNsGreen ? "#00e676" : "rgba(10,70,30,0.4)";
+  ctx.fill();
+  if (isNsGreen) {
+    ctx.shadowColor = "#00e676";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(lampX, grnY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Contador de fase N-S
+  ctx.font = "bold 13px 'JetBrains Mono', monospace";
+  ctx.fillStyle = isNsGreen ? "#00e676" : isNsAmber ? "#ffcc00" : "#ff4d4d";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    engine.axis === "NS" ? `${countdown}s RESTANTE` : "EN ESPERA",
+    lampX,
+    topY + 192,
+  );
+
+  // --- SEMÁFORO VIRTUAL OVERLAY 2: EJE ESTE-OESTE (Derecha) ---
+  const rightX = S - 24 - boxW;
+  ctx.textAlign = "left";
+
+  ctx.fillStyle = "rgba(10,14,23,0.85)";
+  ctx.strokeStyle = isEwGreen ? "#3fbf74" : isEwAmber ? "#e9a92c" : "rgba(224,72,60,0.6)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(rightX, topY, boxW, boxH, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  // Header Eje E-O
+  ctx.font = "bold 11px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "rgba(240,244,250,0.95)";
+  ctx.fillText("SEMÁFORO E–O", rightX + 14, topY + 24);
+
+  ctx.font = "9px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "rgba(180,195,215,0.75)";
+  ctx.fillText(`Vehículos E-O: ${engine.zoneCount("EW")}`, rightX + 14, topY + 38);
+
+  const lampXR = rightX + boxW / 2;
+
+  // Lámpara Roja E-O
+  ctx.beginPath();
+  ctx.arc(lampXR, redY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isEwRed ? "#ff4d4d" : "rgba(80,20,20,0.4)";
+  ctx.fill();
+  if (isEwRed) {
+    ctx.shadowColor = "#ff4d4d";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(lampXR, redY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Lámpara Amarilla E-O
+  ctx.beginPath();
+  ctx.arc(lampXR, ambY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isEwAmber ? "#ffcc00" : "rgba(80,70,20,0.4)";
+  ctx.fill();
+  if (isEwAmber) {
+    ctx.shadowColor = "#ffcc00";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(lampXR, ambY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Lámpara Verde E-O
+  ctx.beginPath();
+  ctx.arc(lampXR, grnY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = isEwGreen ? "#00e676" : "rgba(10,70,30,0.4)";
+  ctx.fill();
+  if (isEwGreen) {
+    ctx.shadowColor = "#00e676";
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.arc(lampXR, grnY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Contador de fase E-O
+  ctx.font = "bold 13px 'JetBrains Mono', monospace";
+  ctx.fillStyle = isEwGreen ? "#00e676" : isEwAmber ? "#ffcc00" : "#ff4d4d";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    engine.axis === "EW" ? `${countdown}s RESTANTE` : "EN ESPERA",
+    lampXR,
+    topY + 192,
+  );
+
+  // --- BANNER INFORMATIVO CENTRAL DE LA IA ---
+  const bannerY = S - 68;
+  const bannerH = 44;
+  const bannerW = S - 48;
+  ctx.textAlign = "left";
+
+  ctx.fillStyle = "rgba(10,14,23,0.92)";
+  ctx.strokeStyle = "rgba(63,191,116,0.5)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(24, bannerY, bannerW, bannerH, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  const decisionTop = engine.decisions[0];
+  const rationale = decisionTop?.rationale || `Optimización continua de verde adaptativo sobre Eje ${engine.axis === "NS" ? "Norte–Sur" : "Este–Oeste"}.`;
+
+  ctx.font = "bold 11px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "#3fbf74";
+  ctx.fillText(`● AMEGHINO AI — OVERLAY EN VIV0 (${engine.axis === "NS" ? "VERDE N-S" : "VERDE E-O"})`, 36, bannerY + 18);
+
+  ctx.font = "10px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "rgba(226,232,240,0.9)";
+  ctx.fillText(rationale.length > 75 ? `${rationale.substring(0, 75)}...` : rationale, 36, bannerY + 34);
+
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ */
+
 export function drawScene(
   ctx: CanvasRenderingContext2D,
   engine: TrafficEngine,
@@ -964,25 +1168,39 @@ export function drawScene(
   realFrame?: HTMLImageElement | null,
 ) {
   ctx.clearRect(0, 0, S, S);
-  if (realFrame && realFrame.complete) {
+  if (realFrame && realFrame.complete && realFrame.naturalWidth > 0) {
+    // Dibujar el video/imagen real de la cámara de Argentina de fondo
     ctx.drawImage(realFrame, 0, 0, S, S);
+
+    // Dibujar overlay de semáforos virtuales e inteligencia sobre el video real
+    drawAugmentedRealSignals(ctx, engine, nowMs);
+
+    if (opts.analysis) {
+      for (const v of engine.vehicles) drawDetectionBox(ctx, v, engine);
+      drawPedestrians(ctx, engine, opts.analysis, nowMs);
+    }
+    if (opts.labels) drawLabels(ctx);
+    if (opts.hud) drawHud(ctx, engine, nowMs);
+  } else {
+    // Modo sintético tradicional
+    ctx.drawImage(getStaticLayer(), 0, 0);
+
+    if (engine.weather === "rain") drawWetRoad(ctx, nowMs);
+    if (opts.cameras) drawCameras(ctx, engine, nowMs);
+
+    for (const v of engine.vehicles) drawVehicle(ctx, v, engine, nowMs);
+    drawPedestrians(ctx, engine, opts.analysis, nowMs);
+    drawSignals(ctx, engine);
+
+    if (engine.night) drawNight(ctx);
+    if (engine.weather === "rain") drawRain(ctx, nowMs);
+    if (engine.weather === "fog") drawFog(ctx, nowMs);
+
+    if (opts.analysis) {
+      for (const v of engine.vehicles) drawDetectionBox(ctx, v, engine);
+    }
+    if (opts.labels) drawLabels(ctx);
+    if (opts.hud) drawHud(ctx, engine, nowMs);
   }
-  ctx.drawImage(getStaticLayer(), 0, 0);
-
-  if (engine.weather === "rain") drawWetRoad(ctx, nowMs);
-  if (opts.cameras) drawCameras(ctx, engine, nowMs);
-
-  for (const v of engine.vehicles) drawVehicle(ctx, v, engine, nowMs);
-  drawPedestrians(ctx, engine, opts.analysis, nowMs);
-  drawSignals(ctx, engine);
-
-  if (engine.night) drawNight(ctx);
-  if (engine.weather === "rain") drawRain(ctx, nowMs);
-  if (engine.weather === "fog") drawFog(ctx, nowMs);
-
-  if (opts.analysis) {
-    for (const v of engine.vehicles) drawDetectionBox(ctx, v, engine);
-  }
-  if (opts.labels) drawLabels(ctx);
-  if (opts.hud) drawHud(ctx, engine, nowMs);
 }
+
