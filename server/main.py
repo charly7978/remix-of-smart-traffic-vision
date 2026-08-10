@@ -19,12 +19,7 @@ app = FastAPI(title="Ameghino AI Vision")
 
 
 def _json_safe(value: Any) -> Any:
-    """Normaliza tipos numpy (float32, int64, ndarray) a tipos JSON nativos.
-
-    Los tensores del modelo ONNX producen np.float32/np.int64 que no son
-    serializables por json.dumps; esta normalización se aplica de forma
-    defensiva sobre la respuesta final para blindar ambos backends.
-    """
+    """Normaliza tipos numpy (float32, int64, ndarray) a tipos JSON nativos."""
     if isinstance(value, np.generic):
         return value.item()
     if isinstance(value, np.ndarray):
@@ -34,6 +29,44 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_json_safe(v) for v in value]
     return value
+
+
+def _vehicle_to_dict(v) -> dict:
+    """Convierte Vehicle dataclass a dict con claves camelCase."""
+    return {
+        "kind": v.kind,
+        "approach": v.approach,
+        "x": _json_safe(v.x),
+        "y": _json_safe(v.y),
+        "w": _json_safe(v.w),
+        "h": _json_safe(v.h),
+        "confidence": _json_safe(v.confidence),
+        "lane": v.lane,
+        "sizeClass": v.size_class,
+    }
+
+
+def build_frame_payload(detection: DetectionFrame, decision, jpg_b64: str) -> dict:
+    """Construye el payload JSON con claves camelCase para el frontend."""
+    return _json_safe({
+        "ts": detection.ts,
+        "hour": detection.hour,
+        "vehicles": [_vehicle_to_dict(v) for v in detection.vehicles],
+        "pedestrians": [{"x": p.x, "y": p.y, "confidence": p.confidence} for p in detection.pedestrians],
+        "weather": detection.weather,
+        "isNight": detection.is_night,
+        "laneDensity": detection.lane_density or {"NS": 0, "EW": 0},
+        "emergencyDetected": detection.emergency_detected,
+        "image": jpg_b64,
+        "decision": {
+            "action": decision.action,
+            "seconds": round(decision.seconds, 1),
+            "axis": decision.axis,
+            "confidence": round(decision.confidence, 2),
+            "rationale": decision.rationale,
+            "contract": decision.contract,
+        },
+    })
 
 app.add_middleware(
     CORSMiddleware,
@@ -102,27 +135,7 @@ def detect_now(camera_id: str = "local-webcam") -> JSONResponse:
     _, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
     jpg = base64.b64encode(buffer).decode("utf-8")
 
-    return JSONResponse(
-        {
-            "ts": detection.ts,
-            "hour": detection.hour,
-            "vehicles": [v.__dict__ for v in detection.vehicles],
-            "pedestrians": [p.__dict__ for p in detection.pedestrians],
-            "weather": detection.weather,
-            "is_night": detection.is_night,
-            "lane_density": detection.lane_density,
-            "emergency_detected": detection.emergency_detected,
-            "image": jpg,
-            "decision": {
-                "action": decision.action,
-                "seconds": round(decision.seconds, 1),
-                "axis": decision.axis,
-                "confidence": round(decision.confidence, 2),
-                "rationale": decision.rationale,
-                "contract": decision.contract,
-            },
-        }
-    )
+    return JSONResponse(build_frame_payload(detection, decision, jpg))
 
 
 @app.websocket("/ws/camera/{camera_id}")
@@ -159,27 +172,7 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
             _, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             jpg = base64.b64encode(buffer).decode("utf-8")
 
-            await websocket.send_json(
-                {
-                    "ts": detection.ts,
-                    "hour": detection.hour,
-                    "vehicles": [v.__dict__ for v in detection.vehicles],
-                    "pedestrians": [p.__dict__ for p in detection.pedestrians],
-                    "weather": detection.weather,
-                    "is_night": detection.is_night,
-                    "lane_density": detection.lane_density,
-                    "emergency_detected": detection.emergency_detected,
-                    "image": jpg,
-                    "decision": {
-                        "action": decision.action,
-                        "seconds": round(decision.seconds, 1),
-                        "axis": decision.axis,
-                        "confidence": round(decision.confidence, 2),
-                        "rationale": decision.rationale,
-                        "contract": decision.contract,
-                    },
-                }
-            )
+            await websocket.send_json(build_frame_payload(detection, decision, jpg))
             await asyncio.sleep(0.05)
     except WebSocketDisconnect:
         pass
