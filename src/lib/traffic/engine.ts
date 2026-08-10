@@ -595,6 +595,14 @@ export class TrafficEngine {
     this.firedEvents.clear();
   }
 
+  setPriority(patch: Partial<PriorityConfig>) {
+    this.config = { ...this.config, ...patch };
+  }
+
+  registerHumanIntervention() {
+    this.humanInterventions += 1;
+  }
+
   setCameraOffline(value: boolean) {
     if (this.cameraOffline === value) return;
     this.cameraOffline = value;
@@ -630,12 +638,13 @@ export class TrafficEngine {
   }
 
   get failSafe(): boolean {
-    return this.cameraOffline || this.detectionRate < 0.55;
+    return this.cameraOffline || this.detectionRate < this.config.visibilityFloor;
   }
 
   get failSafeReason(): string | null {
     if (this.cameraOffline) return "Sin señal de video";
-    if (this.detectionRate < 0.55) return "Percepción degradada por clima";
+    if (this.detectionRate < this.config.visibilityFloor)
+      return "Percepción degradada por clima";
     return null;
   }
 
@@ -762,7 +771,7 @@ export class TrafficEngine {
 
   private pushDecision(d: Omit<AgentDecision, "id" | "hour">) {
     this.decisions.unshift({ ...d, id: this.nextDecisionId++, hour: this.hour });
-    if (this.decisions.length > 14) this.decisions.pop();
+    if (this.decisions.length > 40) this.decisions.pop();
   }
 
   private runEvents(prevHour: number, nowHour: number) {
@@ -1053,6 +1062,10 @@ export class TrafficEngine {
       decisions: [...this.decisions],
       pedWaiting: this.pedWaiting,
       pedCrossing: this.pedCrossing,
+      config: { ...this.config },
+      evidence: this.buildEvidence(this.axis),
+      autonomousDecisions: this.autonomousDecisions,
+      humanInterventions: this.humanInterventions,
     };
   }
 }
