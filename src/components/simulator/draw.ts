@@ -961,8 +961,12 @@ export function drawScene(
   engine: TrafficEngine,
   nowMs: number,
   opts: DrawOptions = DEFAULT_DRAW_OPTIONS,
+  realFrame?: HTMLImageElement | null,
 ) {
   ctx.clearRect(0, 0, S, S);
+  if (realFrame && realFrame.complete) {
+    ctx.drawImage(realFrame, 0, 0, S, S);
+  }
   ctx.drawImage(getStaticLayer(), 0, 0);
 
   if (engine.weather === "rain") drawWetRoad(ctx, nowMs);

@@ -735,9 +735,15 @@ export function drawScene3D(
   engine: TrafficEngine,
   now: number,
   opts: DrawOptions,
+  realFrame?: HTMLImageElement | null,
 ) {
   ctx.clearRect(0, 0, VIEW, VIEW);
-  drawGround(ctx, engine.night);
+  if (realFrame && realFrame.complete) {
+    ctx.drawImage(realFrame, 0, 0, VIEW, VIEW);
+  } else {
+    drawGround(ctx, engine.night);
+    drawBuildings(ctx, engine.night);
+  }
   // corredor habilitado: sutil, bajo los objetos
   {
     const ax = engine.axis;
@@ -754,7 +760,7 @@ export function drawScene3D(
     );
     ctx.restore();
   }
-  drawBuildings(ctx, engine.night);
+  if (!realFrame) drawBuildings(ctx, engine.night);
   drawTrees(ctx);
   if (opts.cameras) drawCameras(ctx, engine, now);
 

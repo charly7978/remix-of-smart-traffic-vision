@@ -9,6 +9,7 @@ import { EventTimeline } from "@/components/simulator/EventTimeline";
 import { FLOW_PRESETS, FlowProfileEditor } from "@/components/simulator/FlowProfileEditor";
 import { WaitChart } from "@/components/simulator/WaitChart";
 import { PitchModeModal } from "@/components/simulator/PitchModeModal";
+import { RealCameraPanel } from "@/components/simulator/RealCameraPanel";
 import {
   APPROACH_LABEL_ES,
   DEFAULT_PRIORITY,
@@ -22,6 +23,8 @@ import {
   type Snapshot,
   type Weather,
 } from "@/lib/traffic/engine";
+import type { DetectionFrame, SourceMode } from "@/lib/traffic/types";
+import { useRealVision } from "@/hooks/useRealVision";
 
 export const Route = createFileRoute("/simulador")({
   head: () => ({
@@ -292,6 +295,50 @@ function SimuladorPage() {
   const [running, setRunning] = useState(true);
   const [startHour, setStartHour] = useState(7);
 
+  // modo real
+  const [sourceMode, setSourceMode] = useState<SourceMode>("synthetic");
+  const [cameraId, setCameraId] = useState("local-webcam");
+  const [realFrame, setRealFrame] = useState<DetectionFrame | null>(null);
+  const realImageRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (sourceMode !== "real" || !realFrame?.rawImage) return;
+    const img = new Image();
+    img.onload = () => {
+      realImageRef.current = img;
+    };
+    img.src = `data:image/jpeg;base64,${realFrame.rawImage}`;
+  }, [sourceMode, realFrame]);
+
+  const handleRealFrame = useCallback((frame: DetectionFrame) => {
+    setRealFrame(frame);
+    const engine = engineRef.current;
+    if (!engine) return;
+    engine.setHour(frame.hour);
+    const weather: Weather = frame.weather === "fog" ? "fog" : frame.weather === "rain" ? "rain" : "clear";
+    engine.setWeather(weather, true);
+    engine.setCameraOffline(false);
+    const ns = frame.laneDensity.NS || 0;
+    const ew = frame.laneDensity.EW || 0;
+    if (ns + ew > 0) {
+      engine.setNsShare(ns / (ns + ew));
+    }
+    if (frame.emergencyDetected) {
+      engine.triggerEmergency();
+    }
+  }, []);
+
+  const handleRealError = useCallback((error: Error) => {
+    console.error("Real vision error:", error);
+  }, []);
+
+  useRealVision({
+    cameraId: sourceMode === "real" ? cameraId : null,
+    enabled: sourceMode === "real",
+    onFrame: handleRealFrame,
+    onError: handleRealError,
+  });
+
   optsRef.current = layers;
   viewRef.current = view;
   pausedRef.current = paused;
@@ -324,8 +371,9 @@ function SimuladorPage() {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       if (!pausedRef.current) engine.update(dt);
-      if (viewRef.current === "3d") drawScene3D(ctx, engine, now, optsRef.current);
-      else drawScene(ctx, engine, now, optsRef.current);
+      const realBg = sourceMode === "real" ? realImageRef.current : null;
+      if (viewRef.current === "3d") drawScene3D(ctx, engine, now, optsRef.current, realBg);
+      else drawScene(ctx, engine, now, optsRef.current, realBg);
       acc += dt;
       if (acc > 0.2) {
         acc = 0;
@@ -514,8 +562,27 @@ function SimuladorPage() {
               {m === "guiado" ? "Recorrido guiado" : "Control manual"}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setSourceMode((s) => (s === "synthetic" ? "real" : "synthetic"))}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              sourceMode === "real"
+                ? "bg-signal-green text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {sourceMode === "real" ? "Cámara real ON" : "Probar cámara real"}
+          </button>
         </div>
       </div>
+
+      {sourceMode === "real" && (
+        <div className="mt-4">
+          <RealCameraPanel
+            onFrame={handleRealFrame}
+          />
+        </div>
+      )}
 
       {/* ------------------------------ guion ------------------------------ */}
       {mode === "guiado" && (
