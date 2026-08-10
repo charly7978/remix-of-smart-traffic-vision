@@ -1,6 +1,6 @@
-"""Prueba de viabilidad de las cámaras públicas argentinas configuradas.
+"""Prueba de viabilidad de las cámaras públicas de cruces con semáforos.
 
-Fuente única de verdad: ARGENTINE_CAMERAS (server/camera_capture.py).
+Fuente única de verdad: INTERSECTION_CAMERAS (server/camera_capture.py).
 Descarga cada imagen candidata, valida que sea JPEG/PNG y la guarda en
 viability_output/snapshots/ para inspección visual, con reporte JSON.
 
@@ -20,7 +20,7 @@ try:
 except Exception:
     HAS_PIL = False
 
-from camera_capture import ARGENTINE_CAMERAS
+from camera_capture import INTERSECTION_CAMERAS
 
 OUT_DIR = Path(__file__).resolve().parent / "viability_output"
 
@@ -43,11 +43,11 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     snap_dir = OUT_DIR / "snapshots"
     snap_dir.mkdir(exist_ok=True)
-    print("=== VIABILIDAD: CÁMARAS PÚBLICAS ARGENTINAS (CRUCES CON SEMÁFOROS) ===")
+    print("=== VIABILIDAD: CÁMARAS PÚBLICAS (CRUCES CON SEMÁFOROS EN VIVO) ===")
     print(f"Fecha: {datetime.now(timezone.utc).isoformat()}\n")
     report: list[dict] = []
     ok = 0
-    for cam in ARGENTINE_CAMERAS:
+    for cam in INTERSECTION_CAMERAS:
         print(f"  {cam.name}")
         print(f"    URL: {cam.url}")
         data, detail = fetch_bytes(cam.url)
@@ -93,7 +93,7 @@ def main() -> None:
     (OUT_DIR / "camera_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"RESULTADO: {ok}/{len(ARGENTINE_CAMERAS)} archivos guardados")
+    print(f"RESULTADO: {ok}/{len(INTERSECTION_CAMERAS)} archivos guardados")
     print(f"Reporte: {OUT_DIR / 'camera_report.json'}")
 
 

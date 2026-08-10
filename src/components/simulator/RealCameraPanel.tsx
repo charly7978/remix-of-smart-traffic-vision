@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { CameraSource, DetectionFrame } from "@/lib/realVision/client";
-import { listCameras, detectNow, setCameraUrl } from "@/lib/realVision/client";
+import { listCameras, detectNow, detectDual, setCameraUrl, connectCameraStream, connectDualCameraStream } from "@/lib/realVision/client";
 
 export function RealCameraPanel({
   onFrame,
@@ -11,12 +11,59 @@ export function RealCameraPanel({
   onSelectCamera?: (cameraId: string) => void;
 }) {
   const [cameras, setCameras] = useState<CameraSource[]>([]);
-  const [cameraId, setCameraId] = useState<string>("cordoba-bv-san-juan-velez-sarsfield");
+  const [cameraId, setCameraId] = useState<string>("london-purley-way-croydon-road");
+  const [dualAxisA, setDualAxisA] = useState<string>("london-purley-way-croydon-road");
+  const [dualAxisB, setDualAxisB] = useState<string>("london-lewisham-way-parkfield");
   const [customUrl, setCustomUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "connecting" | "live" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastFrame, setLastFrame] = useState<DetectionFrame | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [dualLoading, setDualLoading] = useState(false);
+
+  const pollTimer = useRef<number | null>(null);
+  const pollMode = useRef<"single" | "dual">("single");
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const stopStream = () => {
+    if (pollTimer.current !== null) {
+      window.clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+    if (wsRef.current) {
+      try {
+        wsRef.current.close();
+      } catch {
+        // cerrar a la fuerza
+      }
+      wsRef.current = null;
+    }
+  };
+
+  const startStream = (mode: "single" | "dual", axisAId: string, axisBId?: string) => {
+    stopStream();
+    pollMode.current = mode;
+    setStatus("connecting");
+    const onError = (err: Error) => {
+      setStatus("error");
+      setError(`Stream interrumpido: ${err.message}`);
+      // Reintento automático cada 3 s mientras la página esté abierta.
+      if (!wsRef.current) {
+        pollTimer.current = window.setInterval(() => {
+          startStream(mode, axisAId, axisBId);
+        }, 3000);
+      }
+    };
+    if (mode === "dual" && axisBId) {
+      wsRef.current = connectDualCameraStream(axisAId, axisBId, handleFrame, onError);
+    } else {
+      wsRef.current = connectCameraStream(axisAId, handleFrame, onError);
+    }
+  };
+
+  useEffect(() => {
+    return () => stopStream();
+  }, []);
 
   const handleFrame = (frame: DetectionFrame) => {
     setStatus("live");
@@ -52,6 +99,8 @@ export function RealCameraPanel({
 
   useEffect(() => {
     fetchCameras();
+    startStream("single", "london-purley-way-croydon-road");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const metrics = useMemo(() => {
@@ -77,7 +126,10 @@ export function RealCameraPanel({
     onSelectCamera?.(newId);
     setSnapshotLoading(true);
     detectNow(newId)
-      .then(handleFrame)
+      .then((frame) => {
+        handleFrame(frame);
+        startStream("single", newId);
+      })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Error al cargar la cámara");
       })
@@ -97,6 +149,7 @@ export function RealCameraPanel({
       setStatus("connecting");
       const frame = await detectNow("public-url");
       handleFrame(frame);
+      startStream("single", "public-url");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar URL personalizada");
       setStatus("error");
@@ -121,6 +174,22 @@ export function RealCameraPanel({
     }
   };
 
+  const handleDualSnapshot = async () => {
+    setDualLoading(true);
+    setError(null);
+    try {
+      const frame = await detectDual(dualAxisA, dualAxisB);
+      handleFrame(frame);
+      setStatus("live");
+      startStream("dual", dualAxisA, dualAxisB);
+    } catch (err) {
+      setStatus("error");
+      setError(err instanceof Error ? err.message : "Error en la detección dual");
+    } finally {
+      setDualLoading(false);
+    }
+  };
+
   const currentCam = cameras.find((c) => c.id === cameraId);
 
   return (
@@ -128,7 +197,7 @@ export function RealCameraPanel({
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 min-w-[320px]">
           <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-            Cámaras de Cruces de Argentina (En Vivo)
+            Cámaras de Cruces con Semáforos (En Vivo)
           </span>
           <select
             value={cameraId}
@@ -137,7 +206,7 @@ export function RealCameraPanel({
           >
             {cameras.map((c) => (
               <option key={c.id} value={c.id}>
-                🇦🇷 {c.name} {c.location ? `— ${c.location}` : ""}
+                🌍 {c.name} {c.location ? `— ${c.location}` : ""}
               </option>
             ))}
           </select>
@@ -176,6 +245,66 @@ export function RealCameraPanel({
         >
           {snapshotLoading ? "Analizando Cámara..." : "Probar Detección En Vivo"}
         </button>
+      </div>
+
+      <div className="rounded-xl border border-sky-500/30 bg-sky-950/10 p-3 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-sky-400 opacity-75" />
+            <span className="relative inline-flex size-2 rounded-full bg-sky-500" />
+          </span>
+          <span className="font-mono text-[10px] tracking-widest text-sky-400 uppercase font-bold">
+            Simulación de Cruce Real: 2 Cámaras (una por eje, de frente al tráfico)
+          </span>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 min-w-[300px]">
+            <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+              Cámara 1 — Eje N-S (semáforo lado A)
+            </span>
+            <select
+              value={dualAxisA}
+              onChange={(e) => {
+                setDualAxisA(e.target.value);
+                startStream("dual", e.target.value, dualAxisB);
+              }}
+              className="h-9 rounded-md border border-border bg-secondary/60 px-2 text-sm text-foreground focus:ring-1 focus:ring-sky-500"
+            >
+              {cameras.map((c) => (
+                <option key={c.id} value={c.id}>
+                  🌍 {c.name} {c.location ? `— ${c.location}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 min-w-[300px]">
+            <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+              Cámara 2 — Eje E-O (semáforo lado B)
+            </span>
+            <select
+              value={dualAxisB}
+              onChange={(e) => {
+                setDualAxisB(e.target.value);
+                startStream("dual", dualAxisA, e.target.value);
+              }}
+              className="h-9 rounded-md border border-border bg-secondary/60 px-2 text-sm text-foreground focus:ring-1 focus:ring-sky-500"
+            >
+              {cameras.map((c) => (
+                <option key={c.id} value={c.id}>
+                  🌍 {c.name} {c.location ? `— ${c.location}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={handleDualSnapshot}
+            disabled={dualLoading || dualAxisA === dualAxisB}
+            className="h-9 rounded-md bg-sky-600 border border-sky-500/50 px-4 text-xs font-bold text-white transition-colors hover:bg-sky-500 shadow-md shadow-sky-950/50 disabled:opacity-60"
+          >
+            {dualLoading ? "Analizando Ambas Cámaras..." : "Probar Cruce Simulado (2 Cámaras)"}
+          </button>
+        </div>
       </div>
 
       {currentCam && (
@@ -219,6 +348,43 @@ export function RealCameraPanel({
             alt="Feed en vivo de la cámara de la intersección"
             className="w-full max-h-[480px] object-contain bg-slate-950"
           />
+        </div>
+      )}
+
+      {lastFrame?.dual && lastFrame.rawImageB && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="relative overflow-hidden rounded-xl border border-sky-500/40 bg-black/80 shadow-2xl">
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 rounded-md bg-black/80 px-3 py-1.5 backdrop-blur-md border border-sky-500/30">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-sky-500" />
+              </span>
+              <span className="font-mono text-[11px] font-bold tracking-wider text-sky-400 uppercase">
+                CÁMARA 1 · EJE N-S
+              </span>
+            </div>
+            <img
+              src={`data:image/jpeg;base64,${lastFrame.rawImage}`}
+              alt="Cámara 1 del cruce simulado (eje N-S)"
+              className="w-full object-contain bg-slate-950"
+            />
+          </div>
+          <div className="relative overflow-hidden rounded-xl border border-emerald-500/40 bg-black/80 shadow-2xl">
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 rounded-md bg-black/80 px-3 py-1.5 backdrop-blur-md border border-emerald-500/30">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="font-mono text-[11px] font-bold tracking-wider text-emerald-400 uppercase">
+                CÁMARA 2 · EJE E-O
+              </span>
+            </div>
+            <img
+              src={`data:image/jpeg;base64,${lastFrame.rawImageB}`}
+              alt="Cámara 2 del cruce simulado (eje E-O)"
+              className="w-full object-contain bg-slate-950"
+            />
+          </div>
         </div>
       )}
 

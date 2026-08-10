@@ -1,8 +1,9 @@
-"""Verificación de viabilidad de las cámaras públicas argentinas de cruces urbanos.
+"""Verificación de viabilidad de cámaras públicas de cruces urbanos con semáforos.
 
-Fase 1 (investigación): para cada cámara de ARGENTINE_CAMERAS (fuente única de
+Fase 1 (investigación): para cada cámara de INTERSECTION_CAMERAS (fuente única de
 verdad en camera_capture.py) descarga su imagen actual, valida el formato
-(JPEG/PNG), reporta tamaño y firma. Uso:  python verify_cameras.py
+(JPEG/PNG), reporta tamaño, firma y frescura (Last-Modified).
+Uso:  python verify_cameras.py
 """
 
 import base64
@@ -19,10 +20,10 @@ try:
 except Exception:
     HAS_PIL = False
 
-from camera_capture import ARGENTINE_CAMERAS
+from camera_capture import INTERSECTION_CAMERAS
 
 
-def fetch(url: str, timeout: int = 20) -> tuple[bytes | None, str]:
+def fetch(url: str, timeout: int = 20) -> tuple[bytes | None, str, str]:
     try:
         req = urllib.request.Request(
             url,
@@ -32,9 +33,10 @@ def fetch(url: str, timeout: int = 20) -> tuple[bytes | None, str]:
             },
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read(), f"HTTP {resp.status}"
+            last_modified = resp.headers.get("Last-Modified", "")
+            return resp.read(), f"HTTP {resp.status}", last_modified
     except Exception as exc:
-        return None, f"{type(exc).__name__}: {exc}"
+        return None, f"{type(exc).__name__}: {exc}", ""
 
 
 def sniff(data: bytes) -> str:
@@ -71,15 +73,31 @@ def detect_time(img: bytes) -> str:
         return f"detector_error:{type(exc).__name__}"
 
 
+def freshness(last_modified: str, now: datetime) -> str:
+    """Interpreta el header Last-Modified de la imagen como indicador de viveza."""
+    if not last_modified:
+        return "unknown"
+    try:
+        lm = datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S GMT")
+        lm = lm.replace(tzinfo=timezone.utc)
+        age_h = (now - lm).total_seconds() / 3600.0
+        if age_h < 1.5:
+            return f"viva (última actualización hace {age_h:.2f} h)"
+        return f"antigua (hace {age_h:.1f} h)"
+    except Exception:
+        return "no_parseable"
+
+
 def main() -> None:
     out_dir = Path(__file__).resolve().parent / "viability_output"
     out_dir.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc)
     report: list[dict] = []
-    print("=== VERIFICACIÓN DE CÁMARAS PÚBLICAS ARGENTINAS (CRUCES CON SEMÁFOROS) ===")
-    print(f"Fecha: {datetime.now(timezone.utc).isoformat()}\n")
+    print("=== VERIFICACIÓN DE CÁMARAS PÚBLICAS (CRUCES CON SEMÁFOROS EN VIVO) ===")
+    print(f"Fecha: {now.isoformat()}\n")
 
-    for cam in ARGENTINE_CAMERAS:
-        data, detail = fetch(cam.url)
+    for cam in INTERSECTION_CAMERAS:
+        data, detail, last_modified = fetch(cam.url)
         if data is None:
             print(f"  [{cam.id}] {cam.name}\n    [FAIL] {detail}")
             report.append({"id": cam.id, "name": cam.name, "ok": False, "detail": detail})
@@ -96,8 +114,9 @@ def main() -> None:
             except Exception:
                 pass
         yolo = detect_time(data) if ok else "-"
+        fres = freshness(last_modified, now) if ok else "-"
         print(f"  [{cam.id}] {cam.name}")
-        print(f"    [{'OK' if ok else 'FAIL'}] {detail} · {len(data)} bytes · {fmt} {dims}")
+        print(f"    [{'OK' if ok else 'FAIL'}] {detail} · {len(data)} bytes · {fmt} {dims} · {fres}")
         print(f"    YOLO -> {yolo}")
 
         if ok:
@@ -114,6 +133,8 @@ def main() -> None:
                     "bytes": len(data),
                     "format": fmt,
                     "dimensions": dims,
+                    "freshness": fres,
+                    "last_modified": last_modified,
                     "yolo": yolo,
                     "image_b64": base64.b64encode(data).decode("ascii")[:200],
                 }

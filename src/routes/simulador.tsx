@@ -297,7 +297,7 @@ function SimuladorPage() {
 
   // modo real
   const [sourceMode, setSourceMode] = useState<SourceMode>("real");
-  const [cameraId, setCameraId] = useState("cordoba-bv-san-juan-velez-sarsfield");
+  const [cameraId, setCameraId] = useState("london-purley-way-croydon-road");
   const [realFrame, setRealFrame] = useState<DetectionFrame | null>(null);
   const realImageRef = useRef<HTMLImageElement | null>(null);
 

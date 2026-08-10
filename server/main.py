@@ -11,7 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from camera_capture import CameraCapture, CameraSource
+from camera_capture import CameraCapture, CameraSource, get_capture
 from detector import YoloDetector, DetectionFrame
 from decision import detections_to_evidence, auto_decide
 
@@ -116,13 +116,14 @@ def detect_now(camera_id: str = "local-webcam") -> JSONResponse:
     if source is None:
         return JSONResponse({"error": "camera_not_found"}, status_code=404)
 
-    capture.set_source(source)
+    cap = get_capture(camera_id)
+    cap.set_source(source)
     try:
-        capture.start()
+        cap.start()
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
-    frame = capture.read_frame()
+    frame = cap.read_frame()
     if frame is None:
         return JSONResponse({"error": "no_frame"}, status_code=500)
 
@@ -138,6 +139,82 @@ def detect_now(camera_id: str = "local-webcam") -> JSONResponse:
     return JSONResponse(build_frame_payload(detection, decision, jpg))
 
 
+def _read_source_frame(camera_id: str, source: CameraSource) -> tuple[Optional[np.ndarray], Optional[JSONResponse]]:
+    cap = get_capture(camera_id)
+    cap.set_source(source)
+    try:
+        cap.start()
+    except Exception as e:
+        return None, JSONResponse({"error": str(e)}, status_code=500)
+    frame = cap.read_frame()
+    if frame is None:
+        return None, JSONResponse({"error": "no_frame"}, status_code=500)
+    return frame, None
+
+
+def _fusion(a: DetectionFrame, b: DetectionFrame) -> DetectionFrame:
+    """Fusiona las dos cámaras del cruce simulado: cada cámara aporta su eje.
+
+    Cámara A = eje N-S (autos de frente a la cámara de un lado del cruce),
+    Cámara B = eje E-O (autos de frente a la cámara del otro lado del cruce).
+    El conteo de cada cámara alimenta la densidad de su propio eje, que es
+    exactamente como se calcularía con dos cámaras reales en la misma esquina.
+    """
+    return DetectionFrame(
+        ts=(a.ts + b.ts) / 2.0,
+        hour=a.hour,
+        vehicles=a.vehicles + b.vehicles,
+        pedestrians=a.pedestrians + b.pedestrians,
+        weather=a.weather if a.weather == b.weather else ("clear" if a.weather == "clear" else b.weather),
+        is_night=a.is_night or b.is_night,
+        lane_density={"NS": float(len(a.vehicles)), "EW": float(len(b.vehicles))},
+        emergency_detected=a.emergency_detected or b.emergency_detected,
+        raw_image=None,
+    )
+
+
+@app.get("/api/detect_dual")
+def detect_dual(
+    axis_a_camera_id: str = "london-purley-way-croydon-road",
+    axis_b_camera_id: str = "london-lewisham-way-parkfield",
+) -> JSONResponse:
+    """Simula las DOS cámaras de un mismo cruce (una por eje con semáforo).
+
+    Como no hay un único cruce del que podamos tomar ambas cámaras en vivo,
+    usamos dos tomas reales de frente al tráfico de cada calle y las tratamos
+    como las dos cámaras del mismo cruce (solo a fines de probar la IA).
+    """
+    sources = {s.id: s for s in capture.sources()}
+    if axis_a_camera_id not in sources or axis_b_camera_id not in sources:
+        return JSONResponse({"error": "camera_not_found"}, status_code=404)
+
+    frame_a, err_a = _read_source_frame(axis_a_camera_id, sources[axis_a_camera_id])
+    if err_a is not None:
+        return err_a
+    frame_b, err_b = _read_source_frame(axis_b_camera_id, sources[axis_b_camera_id])
+    if err_b is not None:
+        return err_b
+
+    ts = time.time()
+    hour = (time.localtime().tm_hour + time.localtime().tm_min / 60) % 24
+    det_a = detector.detect(frame_a, ts, hour)
+    det_b = detector.detect(frame_b, ts, hour)
+    fused = _fusion(det_a, det_b)
+
+    evidence = detections_to_evidence(fused, current_axis)
+    decision = auto_decide(evidence, config)
+
+    _, buf_a = cv2.imencode(".jpg", frame_a, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+    _, buf_b = cv2.imencode(".jpg", frame_b, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+    jpg_a = base64.b64encode(buf_a).decode("utf-8")
+    jpg_b = base64.b64encode(buf_b).decode("utf-8")
+
+    payload = build_frame_payload(fused, decision, jpg_a)
+    payload["image_b"] = jpg_b
+    payload["camera_ids"] = {"axis_a": axis_a_camera_id, "axis_b": axis_b_camera_id}
+    return JSONResponse(payload)
+
+
 @app.websocket("/ws/camera/{camera_id}")
 async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
     await websocket.accept()
@@ -147,17 +224,20 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
         await websocket.close()
         return
 
+    cap = get_capture(camera_id)
     try:
-        capture.set_source(source)
-        capture.start()
+        cap.set_source(source)
+        cap.start()
     except Exception as e:
         await websocket.send_json({"error": str(e)})
         await websocket.close()
         return
 
+    last_decision = None
+    last_decision_ts = 0.0
     try:
         while True:
-            frame = capture.read_frame()
+            frame = cap.read_frame()
             if frame is None:
                 await websocket.send_json({"error": "no_frame"})
                 await asyncio.sleep(0.5)
@@ -166,18 +246,91 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
             ts = time.time()
             hour = ((time.localtime().tm_hour + time.localtime().tm_min / 60) % 24)
             detection = detector.detect(frame, ts, hour)
-            evidence = detections_to_evidence(detection, current_axis)
-            decision = auto_decide(evidence, config)
+
+            # La decisión se recalcula y se registra cada 5 s (el video sigue
+            # fluyendo a ~20 fps sin saturar el log de evidencia).
+            if last_decision is None or ts - last_decision_ts >= 5.0:
+                evidence = detections_to_evidence(detection, current_axis)
+                last_decision = auto_decide(evidence, config)
+                last_decision_ts = ts
 
             _, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             jpg = base64.b64encode(buffer).decode("utf-8")
 
-            await websocket.send_json(build_frame_payload(detection, decision, jpg))
+            await websocket.send_json(build_frame_payload(detection, last_decision, jpg))
             await asyncio.sleep(0.05)
     except WebSocketDisconnect:
         pass
     finally:
-        capture.stop()
+        cap.stop()
+
+
+@app.websocket("/ws/camera_dual")
+async def ws_camera_dual(
+    websocket: WebSocket,
+    axis_a_camera_id: str = "london-purley-way-croydon-road",
+    axis_b_camera_id: str = "london-lewisham-way-parkfield",
+) -> None:
+    """Stream continuo del cruce simulado: las DOS cámaras en vivo a la vez.
+
+    Cada cámara alimenta su eje (A = N-S, B = E-O) y el video de ambas fluye
+    junto con la decisión fusionada, como si fueran las dos cámaras reales
+    del mismo cruce.
+    """
+    await websocket.accept()
+    sources = {s.id: s for s in capture.sources()}
+    if axis_a_camera_id not in sources or axis_b_camera_id not in sources:
+        await websocket.send_json({"error": "camera_not_found"})
+        await websocket.close()
+        return
+
+    cap_a = get_capture(axis_a_camera_id)
+    cap_b = get_capture(axis_b_camera_id)
+    try:
+        cap_a.set_source(sources[axis_a_camera_id])
+        cap_a.start()
+        cap_b.set_source(sources[axis_b_camera_id])
+        cap_b.start()
+    except Exception as e:
+        await websocket.send_json({"error": str(e)})
+        await websocket.close()
+        return
+
+    last_decision = None
+    last_decision_ts = 0.0
+    try:
+        while True:
+            frame_a = cap_a.read_frame()
+            frame_b = cap_b.read_frame()
+            if frame_a is None or frame_b is None:
+                await websocket.send_json({"error": "no_frame"})
+                await asyncio.sleep(0.5)
+                continue
+
+            ts = time.time()
+            hour = ((time.localtime().tm_hour + time.localtime().tm_min / 60) % 24)
+            det_a = detector.detect(frame_a, ts, hour)
+            det_b = detector.detect(frame_b, ts, hour)
+            fused = _fusion(det_a, det_b)
+
+            if last_decision is None or ts - last_decision_ts >= 5.0:
+                evidence = detections_to_evidence(fused, current_axis)
+                last_decision = auto_decide(evidence, config)
+                last_decision_ts = ts
+
+            _, buf_a = cv2.imencode(".jpg", frame_a, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            _, buf_b = cv2.imencode(".jpg", frame_b, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+
+            payload = build_frame_payload(fused, last_decision, base64.b64encode(buf_a).decode("utf-8"))
+            payload["image_b"] = base64.b64encode(buf_b).decode("utf-8")
+            payload["camera_ids"] = {"axis_a": axis_a_camera_id, "axis_b": axis_b_camera_id}
+            await websocket.send_json(payload)
+            await asyncio.sleep(0.05)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        cap_a.stop()
+        cap_b.stop()
 
 
 @app.get("/")

@@ -1,59 +1,62 @@
-"""Consulta metadatos de frescura de las webcams candidatas (API pública de Windy)."""
+"""Consulta la frescura de las cámaras de cruces semaforizados (TfL JamCams).
 
-import json
+Estrategia sin API key: cada imagen vive en S3 (s3-eu-west-1.amazonaws.com) y
+TfL la reemplaza cada pocos segundos; el header Last-Modified del objeto refleja
+la última actualización. Además, para las primeras cámaras se descarga dos veces
+con intervalo y se compara el contenido: si cambió, la cámara está realmente viva.
+Uso:  python freshness_probe.py
+"""
+
 import sys
 import urllib.request
 from datetime import datetime, timezone
+from pathlib import Path
 
-API = "https://node.windy.com/webcams/v1.0/list?nearby={lat},{lon}"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-IDS = [
-    1664693412, 1664734573, 1671043464, 1664650790, 1665026688, 1664930739,
-    1664940352, 1664940551, 1664929778, 1664650968, 1691337947, 1745449788,
-    1577126865, 1751040831, 1650988843, 1741309831, 1793909466, 1793905772,
-    1732394190,
-]
+from camera_capture import INTERSECTION_CAMERAS  # noqa: E402
 
-SEARCH = [
-    ("Córdoba", "-31.4201,-64.1888"),
-    ("Buenos Aires", "-34.6037,-58.3816"),
-    ("Vicente López", "-34.5304,-58.4870"),
-    ("Avellaneda", "-34.6550,-58.3521"),
-    ("Mar del Plata", "-38.0055,-57.5426"),
-    ("Mendoza", "-32.8895,-68.8458"),
-    ("Cipolletti", "-38.9355,-68.0207"),
-    ("Santiago del Estero", "-27.7834,-64.2641"),
-]
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AmeghinoAI/0.1"}
 
 
-def fetch(url: str) -> dict:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 AmeghinoAI/0.1"})
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+def fetch(url: str, timeout: int = 20) -> tuple[bytes, str] | tuple[None, str]:
+    req = urllib.request.Request(url, headers=UA)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read(), resp.headers.get("Last-Modified", "")
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {exc}"
 
 
 def main() -> None:
-    by_id: dict[int, dict] = {}
-    for city, coords in SEARCH:
-        data = fetch(API.format(lat=coords.split(",")[0], lon=coords.split(",")[1]))
-        for cam in data.get("cams", []):
-            by_id[cam["id"]] = cam
-
     now = datetime.now(timezone.utc)
-    print("id          lastUpdate         hace   título")
-    print("-" * 100)
-    for cam_id in IDS:
-        cam = by_id.get(cam_id)
-        if not cam:
-            print(f"{cam_id}  SIN METADATOS")
+    print("cámara                           Last-Modified (UTC)      viveza")
+    print("-" * 90)
+    live = 0
+    for idx, cam in enumerate(INTERSECTION_CAMERAS):
+        data1, lm = fetch(cam.url)
+        if data1 is None:
+            print(f"  ERROR {cam.id}: {lm}")
             continue
-        lu = cam.get("lastUpdate") or 0
-        ld = cam.get("lastDaylight") or 0
-        dt = datetime.fromtimestamp(lu / 1000, tz=timezone.utc)
-        age = (now - dt).total_seconds() / 3600
-        daylight_age = (now - datetime.fromtimestamp(ld / 1000, tz=timezone.utc)).total_seconds() / 3600 if ld else None
-        extra = f" | luz: hace {daylight_age:.1f}h" if daylight_age is not None else ""
-        print(f"{cam_id}  {dt.strftime('%Y-%m-%d %H:%M UTC')}  {age:6.1f}h{extra}  {cam['title']}")
+        changed = "?"
+        if idx < 4:  # chequeo de viveza por diferencia de contenido en un subconjunto
+            import time
+
+            time.sleep(6)
+            data2, _ = fetch(cam.url)
+            changed = "SI" if (data2 is not None and data2 != data1) else "NO"
+        fresh = "SIN CABECERA"
+        if lm and not lm.startswith(("HTTP", "Timeout", "URLError")):
+            try:
+                lm_dt = datetime.strptime(lm, "%a, %d %b %Y %H:%M:%S GMT").replace(tzinfo=timezone.utc)
+                age_h = (now - lm_dt).total_seconds() / 3600.0
+                fresh = f"hace {age_h:.2f} h"
+            except Exception:
+                pass
+        if fresh in ("SIN CABECERA",) or (isinstance(fresh, str) and fresh.startswith("hace") and float(fresh.split()[1]) < 1.5):
+            live += 1 if fresh != "SIN CABECERA" else 0
+        print(f"  {cam.id:<34} {lm or '-':<24} {fresh} | contenido cambió: {changed}")
+    print(f"\nRESULTADO: {live}/{len(INTERSECTION_CAMERAS)} con Last-Modified fresco (<1.5 h)")
 
 
 if __name__ == "__main__":

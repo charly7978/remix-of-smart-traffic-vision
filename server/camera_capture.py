@@ -61,7 +61,7 @@ def resolve_stream_url(raw_url: str) -> str:
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 LOCAL_VIDEO_PATH = ASSETS_DIR / "input_video.mp4"
 VIDEO_DEGIRUM_PATH = ASSETS_DIR / "cruce_degirum.mp4"
-SNAPSHOT_RATE_SECONDS = 10.0
+SNAPSHOT_RATE_SECONDS = 1.0
 _IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
 BROWSER_HEADERS = {
@@ -70,120 +70,130 @@ BROWSER_HEADERS = {
 }
 
 # ---------------------------------------------------------------------------
-# Cámaras públicas EN VIVO de cruces y bocacalles argentinas con semáforos.
-# La lista contiene SOLO cruces vehiculares semaforizados (calle × calle).
-# Proveedor: red de webcams agregada por Windy (imagen actual, sin API key).
-# URLs estables tipo: https://images-webcams.windy.com/88/{id}/current/original/{id}.jpg
-# Verificación 2026-08-10: operativas (HTTP 200, actualización ~1 min).
+# Cámaras públicas EN VIVO de cruces urbanos con semáforos (nivel mundial).
+# Todas son ESQUINAS TIPO CRUZ reales: intersección de dos calles con
+# semáforos y tráfico vehicular visible (verificadas con YOLO sobre el pool
+# completo de TfL: presencia de semáforos + vehículos en frames sucesivos).
+# Proveedor: red oficial de TfL JamCams (Transport for London).
+# URLs directas sin API key, imagen JPEG actualizada cada pocos segundos:
+#   https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/{id}.jpg
+# Listado de cruces: API https://api.tfl.gov.uk/Place/Type/JamCam (campo imageUrl).
+# Verificación 2026-08-10: operativas (HTTP 200, JPEG, semáforos státicos en
+# dos tomas distanciadas minutos).
 # ---------------------------------------------------------------------------
 
-ARGENTINE_CAMERAS: list[CameraSource] = [
-    # --- Córdoba: cruces de avenidas del centro, todos semaforizados ---
+INTERSECTION_CAMERAS: list[CameraSource] = [
     CameraSource(
-        id="cordoba-bv-san-juan-velez-sarsfield",
-        name="Córdoba › Bv. San Juan y Av. Vélez Sarsfield (Patio Olmos)",
-        url="https://images-webcams.windy.com/88/1664693412/current/original/1664693412.jpg",
+        id="london-purley-way-croydon-road",
+        name="Londres › Purley Way y Croydon Road",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04564.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cordoba-27-abril-velez-sarsfield",
-        name="Córdoba › 27 de Abril y Av. Vélez Sarsfield",
-        url="https://images-webcams.windy.com/88/1664734573/current/original/1664734573.jpg",
+        id="london-clapham-common-southside",
+        name="Londres › A3 Clapham Common Southside y Long Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04650.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cordoba-av-colon-general-paz",
-        name="Córdoba › Av. Colón y Av. General Paz",
-        url="https://images-webcams.windy.com/88/1665026688/current/original/1665026688.jpg",
+        id="london-watford-way-broadway",
+        name="Londres › A1 Watford Way y The Broadway",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.09744.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cordoba-plaza-espana-yrigoyen",
-        name="Córdoba › Plaza España y Av. Hipólito Yrigoyen",
-        url="https://images-webcams.windy.com/88/1664930739/current/original/1664930739.jpg",
+        id="london-central-way-drury-way",
+        name="Londres › Great Central Way y Drury Way",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.08005.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cordoba-av-olmos-maipu-norte",
-        name="Córdoba › Av. Emilio Olmos y Av. Maipú (N)",
-        url="https://images-webcams.windy.com/88/1664940352/current/original/1664940352.jpg",
+        id="london-lewisham-way-parkfield",
+        name="Londres › A20 Lewisham Way y Parkfield Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03700.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cordoba-av-olmos-maipu-este",
-        name="Córdoba › Av. Emilio Olmos y Av. Maipú (E)",
-        url="https://images-webcams.windy.com/88/1664940551/current/original/1664940551.jpg",
+        id="london-eastern-ave-north-st",
+        name="Londres › A12 Eastern Avenue y A125 North St",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.02425.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cordoba-humberto-primo-general-paz",
-        name="Córdoba › Humberto Primo y Av. General Paz",
-        url="https://images-webcams.windy.com/88/1664929778/current/original/1664929778.jpg",
+        id="london-mile-end-cambridge-heath",
+        name="Londres › Mile End Rd y Cambridge Heath Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.02109.jpg",
         kind="public",
-        location="Córdoba, Córdoba",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
-    # --- Buenos Aires: cruce más emblemático del país ---
     CameraSource(
-        id="caba-9-julio-corrientes",
-        name="Buenos Aires › Av. 9 de Julio y Av. Corrientes (Obelisco)",
-        url="https://images-webcams.windy.com/88/1691337947/current/original/1691337947.jpg",
+        id="london-bowes-brownlow",
+        name="Londres › Bowes Rd y Brownlow Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.01436.jpg",
         kind="public",
-        location="CABA, Plaza de la República",
+        location="Londres, Reino Unido",
         intersection_type="Cruce con semáforos",
     ),
-    # --- Otras ciudades: bocacalles céntricas semaforizadas ---
     CameraSource(
-        id="mdp-torreon-del-monje",
-        name="Mar del Plata › Torreón del Monje (Av. costanera)",
-        url="https://images-webcams.windy.com/88/1650988843/current/original/1650988843.jpg",
+        id="london-harleyford-ken-pk",
+        name="Londres › Harleyford St y Ken Pk Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04332.jpg",
         kind="public",
-        location="Mar del Plata, Buenos Aires",
-        intersection_type="Boulevard semaforizado",
+        location="Londres, Reino Unido",
+        intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="mdp-museo-mar",
-        name="Mar del Plata › Museo MAR (Av. costanera)",
-        url="https://images-webcams.windy.com/88/1741309831/current/original/1741309831.jpg",
+        id="london-herne-hill-norwood",
+        name="Londres › Herne Hill y Norwood Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03865.jpg",
         kind="public",
-        location="Mar del Plata, Buenos Aires",
-        intersection_type="Boulevard semaforizado",
+        location="Londres, Reino Unido",
+        intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="mendoza-tribunales",
-        name="Mendoza › Tribunales (centro)",
-        url="https://images-webcams.windy.com/88/1793909466/current/original/1793909466.jpg",
+        id="london-talgarth-gliddon",
+        name="Londres › Talgarth Rd y Gliddon Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.06614.jpg",
         kind="public",
-        location="Ciudad de Mendoza",
-        intersection_type="Bocacalle semaforizada",
+        location="Londres, Reino Unido",
+        intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="cipolletti-centro",
-        name="Cipolletti › Centro",
-        url="https://images-webcams.windy.com/88/1793905772/current/original/1793905772.jpg",
+        id="london-new-cross-st-james",
+        name="Londres › A2 New Cross Rd y St James",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03663.jpg",
         kind="public",
-        location="Cipolletti, Río Negro",
-        intersection_type="Bocacalle semaforizada",
+        location="Londres, Reino Unido",
+        intersection_type="Cruce con semáforos",
     ),
     CameraSource(
-        id="sde-plaza-libertad",
-        name="Santiago del Estero › Plaza Libertad (centro)",
-        url="https://images-webcams.windy.com/88/1732394190/current/original/1732394190.jpg",
+        id="london-brixton-hill-lambert",
+        name="Londres › Brixton Hill y Lambert Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04510.jpg",
         kind="public",
-        location="Santiago del Estero",
-        intersection_type="Bocacalle semaforizada",
+        location="Londres, Reino Unido",
+        intersection_type="Cruce con semáforos",
+    ),
+    CameraSource(
+        id="london-barking-prince-regent",
+        name="Londres › Barking Rd y Prince Regent Lane",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.02314.jpg",
+        kind="public",
+        location="Londres, Reino Unido",
+        intersection_type="Cruce con semáforos",
     ),
 ]
 
@@ -205,7 +215,7 @@ class CameraCapture:
 
     def sources(self) -> list[CameraSource]:
         return [
-            *ARGENTINE_CAMERAS,
+            *INTERSECTION_CAMERAS,
             CameraSource(
                 id="local-webcam",
                 name="Cámara Local / Webcam Directa (Dispositivo)",
@@ -356,3 +366,22 @@ class CameraCapture:
     def _is_image_url(url: str) -> bool:
         path = url.split("?")[0].lower()
         return path.endswith(_IMAGE_EXTENSIONS)
+
+
+# ---------------------------------------------------------------------------
+# Registro de capturas: UNA instancia de CameraCapture por cámara y eje.
+# El cruce simulado usa dos cámaras simultáneas (una por eje), cada una con su
+# propia sesión de descarga y su último frame real, como en la realidad.
+# ---------------------------------------------------------------------------
+
+_CAPTURES: dict[str, CameraCapture] = {}
+_CAPTURES_LOCK = threading.Lock()
+
+
+def get_capture(camera_id: str) -> CameraCapture:
+    with _CAPTURES_LOCK:
+        cap = _CAPTURES.get(camera_id)
+        if cap is None:
+            cap = CameraCapture()
+            _CAPTURES[camera_id] = cap
+        return cap
