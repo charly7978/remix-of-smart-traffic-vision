@@ -18,7 +18,9 @@ export function RealCameraPanel({
   const [lastFrame, setLastFrame] = useState<DetectionFrame | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchCameras = () => {
+    setStatus("connecting");
+    setError(null);
     listCameras()
       .then((cams) => {
         setCameras(cams);
@@ -27,8 +29,16 @@ export function RealCameraPanel({
           setCameraId(first);
           onSelectCamera?.(first);
         }
+        setStatus("idle");
       })
-      .catch(() => setStatus("error"));
+      .catch((err) => {
+        setStatus("error");
+        setError(err instanceof Error ? err.message : "Error de conexión con el backend de visión (Puerto 8787)");
+      });
+  };
+
+  useEffect(() => {
+    fetchCameras();
   }, []);
 
   const metrics = useMemo(() => {
@@ -160,7 +170,18 @@ export function RealCameraPanel({
 
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={status} />
-        {error && <span className="font-mono text-[11px] text-destructive">{error}</span>}
+        {error && (
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[11px] text-destructive">{error}</span>
+            <button
+              type="button"
+              onClick={fetchCameras}
+              className="rounded bg-destructive/20 px-2 py-0.5 font-mono text-[10px] font-semibold text-destructive hover:bg-destructive/30"
+            >
+              Reintentar Conexión (Port 8787)
+            </button>
+          </div>
+        )}
       </div>
 
       {metrics && (
