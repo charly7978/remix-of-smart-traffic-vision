@@ -1,0 +1,9 @@
+# Backend de detección de máxima precisión (OPCIONAL).
+# El detector funciona sin esto usando OpenCV DNN + modelo ONNX.
+#
+# NOTA: ultralytics arrastra torch, que en Windows requiere Long Paths
+# habilitado (git config core.longpaths true / política de grupo).
+# Instalá solo cuando el entorno lo permita:
+#   pip install -r requirements-ml.txt
+numpy==2.2.6
+ultralytics==8.3.101
