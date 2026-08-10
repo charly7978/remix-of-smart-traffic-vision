@@ -297,7 +297,7 @@ function SimuladorPage() {
 
   // modo real
   const [sourceMode, setSourceMode] = useState<SourceMode>("synthetic");
-  const [cameraId, setCameraId] = useState("local-webcam");
+  const [cameraId, setCameraId] = useState("sample-argentina-intersection");
   const [realFrame, setRealFrame] = useState<DetectionFrame | null>(null);
   const realImageRef = useRef<HTMLImageElement | null>(null);
 
