@@ -533,6 +533,9 @@ function SimuladorPage() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
+                <Toggle on={view === "3d"} onClick={() => setView(view === "3d" ? "cenital" : "3d")}>
+                  {view === "3d" ? "Vista 3D" : "Vista cenital"}
+                </Toggle>
                 <Toggle on={layers.analysis} onClick={() => toggleLayer("analysis")}>
                   Detecciones
                 </Toggle>
