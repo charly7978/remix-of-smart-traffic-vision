@@ -352,7 +352,7 @@ function SimuladorPage() {
             green: engine.greenAssigned,
             sigmaNs: engine.zoneCount("NS"),
             sigmaEw: engine.zoneCount("EW"),
-            decision: top && top.id !== lastDecisionId ? top : null,
+            decision: top,
           };
           if (top && top.id !== lastDecisionId) lastDecisionId = top.id;
           const buf = [...framesRef.current, next].slice(-90);
