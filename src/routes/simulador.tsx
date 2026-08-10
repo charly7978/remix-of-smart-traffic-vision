@@ -770,6 +770,69 @@ function SimuladorPage() {
             <WaitChart history={snap?.history ?? []} />
           </Panel>
 
+          <Panel
+            title="Autonomía verificada"
+            subtitle="El sistema decide solo. Estos contadores muestran cuántas fases se resolvieron en la esquina, sin operador ni central, y con qué latencia."
+            right={
+              <span className="rounded bg-signal-green/15 px-2 py-1 font-mono text-[10px] tracking-widest text-signal-green">
+                SIN OPERADOR
+              </span>
+            }
+          >
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <Metric
+                value={`${snap?.autonomousDecisions ?? 0}`}
+                label="Fases decididas de forma autónoma"
+                tone="text-signal-green"
+              />
+              <Metric
+                value={`${snap?.humanInterventions ?? 0}`}
+                label="Intervenciones humanas requeridas"
+              />
+              <Metric
+                value={`${snap?.decisions[0]?.latencyMs ?? 0} ms`}
+                label="Latencia de la última decisión en el borde"
+              />
+              <Metric
+                value={`${((snap?.detectionRate ?? 0) * 100).toFixed(0)}%`}
+                label="Tasa de clasificación autoevaluada"
+              />
+            </div>
+            <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
+              Cada fase se resuelve dentro del gabinete de la esquina: la cámara observa, el modelo
+              de visión clasifica, el razonador propone una intención y el validador determinista la
+              acepta o la rechaza. No hay una persona mirando pantallas ni una orden que viaje a un
+              centro de control: la decisión ocurre donde ocurre el tránsito, en decenas de
+              milisegundos. La central sólo recibe la copia auditable de lo ya decidido.
+            </p>
+          </Panel>
+
+          <Panel
+            title="Comparación contrafáctica de políticas"
+            subtitle="Sobre la misma evidencia observada, modifique los parámetros de prioridad y vea exactamente cómo cambia la decisión. Es la herramienta para acordar una política pública antes de escribirla en un pliego."
+          >
+            <CounterfactualPanel
+              evidence={snap?.evidence ?? null}
+              baseConfig={priority}
+              onApply={(cfg) => {
+                setPriority(cfg);
+                engine()?.setPriority(cfg);
+                engine()?.registerHumanIntervention();
+              }}
+            />
+          </Panel>
+
+          <Panel
+            title="Auditoría fotograma a fotograma"
+            subtitle="Cada cuadro guarda la imagen que vio la cámara, el estado del cruce y —cuando hubo cambio de fase— el contrato JSON completo que el agente publicó al controlador."
+          >
+            <AuditPanel
+              frames={frames}
+              paused={paused}
+              onTogglePause={() => setPaused((p) => !p)}
+            />
+          </Panel>
+
           {mode === "libre" && (
             <Panel
               title="Eventos programados de la jornada"
