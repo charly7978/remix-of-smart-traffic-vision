@@ -394,10 +394,124 @@ export function fixedCycleDelay(flowVehH: number): number {
 
 const APPROACHES: Approach[] = ["N", "S", "E", "W"];
 
+function clockLabel(hour: number): string {
+  const h = Math.floor(hour) % 24;
+  const m = Math.floor((hour % 1) * 60);
+  const s = Math.floor((((hour % 1) * 60) % 1) * 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+const AXIS_LABEL: Record<Axis, string> = { NS: "Norte–Sur", EW: "Este–Oeste" };
+
+/**
+ * Núcleo de decisión, puro y determinista respecto de (evidencia, perfil de prioridades).
+ * Se usa tanto en vivo como para las comparaciones contrafactuales de la auditoría.
+ */
+export function decide(ev: Evidence, cfg: PriorityConfig): DecisionResult {
+  const ax = ev.axis;
+  const other = ax === "NS" ? "EW" : "NS";
+  const axLabel = AXIS_LABEL[ax];
+  const otherLabel = AXIS_LABEL[other as Axis];
+  const failSafe = ev.cameraOffline || ev.detectionRate < cfg.visibilityFloor;
+
+  let g: number;
+  let source: AgentDecision["source"] = "vlm";
+  let confidence: number;
+  let rationale: string;
+
+  if (failSafe) {
+    g = FIXED_CYCLE_GREEN;
+    source = "failsafe";
+    confidence = 1;
+    rationale = ev.cameraOffline
+      ? "Sin señal de video verificable. El validador bloquea toda decisión de la IA y ejecuta el plan fijo pregrabado de 22 s por eje."
+      : `La tasa de clasificación (${(ev.detectionRate * 100).toFixed(0)}%) cayó por debajo del umbral configurado (${(cfg.visibilityFloor * 100).toFixed(0)}%). Se descarta la percepción y se ejecuta el plan fijo pregrabado.`;
+  } else {
+    g = Math.min(cfg.tMax, Math.max(cfg.tSeg, 4 + cfg.beta * ev.sigma));
+    if (ev.weather !== "clear") g += cfg.weatherMargin;
+    if (ev.pedWaitingOther > 0 && cfg.pedWeight > 0) {
+      g = Math.max(cfg.tSeg, g - ev.pedWaitingOther * cfg.pedWeight * 2);
+    }
+    if (ev.reducedWaiting) g = Math.min(g, cfg.reducedCap);
+    confidence = Math.min(0.98, 0.6 + ev.visibility * 0.38);
+
+    if (ev.night && ev.sigma <= 2) {
+      rationale = `Madrugada: sólo ${ev.sigma} vehículo(s) sobre ${axLabel} y cruce despejado. Se libera el verde de inmediato para no dejar al conductor detenido y expuesto.`;
+    } else if (ev.reducedWaiting) {
+      rationale = `Peatón con movilidad reducida esperando en la senda de ${otherLabel}. El verde de ${axLabel} se acota a ${g.toFixed(0)} s (techo configurado ${cfg.reducedCap} s) para habilitar el cruce con tiempo extendido.`;
+    } else if (ev.sigma >= 10) {
+      rationale = `Cola saturada en ${axLabel} (σ=${ev.sigma} objetos válidos) contra ${ev.sigmaOther} en ${otherLabel}. Se extiende el verde a ${g.toFixed(0)} s, con techo T_max de ${cfg.tMax} s.`;
+    } else if (ev.pedWaitingOther > 0) {
+      rationale = `${ev.pedWaitingOther} peatón(es) en espera sobre ${otherLabel}, con peso de prioridad ${cfg.pedWeight.toFixed(1)}×. Verde de ${axLabel} dimensionado en ${g.toFixed(0)} s: se atiende la cola sin castigar el cruce peatonal.`;
+    } else if (ev.weather !== "clear") {
+      rationale = `Calzada con ${WEATHER_LABEL_ES[ev.weather].toLowerCase()}: σ=${ev.sigma} con confianza degradada. Se agrega margen de frenado de ${cfg.weatherMargin} s y se asignan ${g.toFixed(0)} s de verde a ${axLabel}.`;
+    } else {
+      rationale = `Demanda equilibrada: σ=${ev.sigma} en ${axLabel} contra ${ev.sigmaOther} en ${otherLabel}. Verde proporcional de ${g.toFixed(0)} s según T_v = max(T_seg, min(T_max, β·σ)) con β=${cfg.beta.toFixed(1)}.`;
+    }
+  }
+
+  if (ev.emergencyApproach && axisOf(ev.emergencyApproach) === ax) {
+    g = Math.max(g, cfg.emergencyMin);
+    source = "emergency";
+    confidence = 0.99;
+    rationale = `Vehículo de emergencia identificado en el acceso ${APPROACH_LABEL_ES[ev.emergencyApproach]} (silueta + baliza). Se abre corredor prioritario sobre ${axLabel} y se sostiene el verde ${g.toFixed(0)} s hasta liberar la intersección.`;
+  }
+
+  g = Math.round(g * 10) / 10;
+  const latencyMs = Math.round(42 + (ev.weather === "clear" ? 0 : 14) + (1 - ev.visibility) * 30);
+
+  const contract: DecisionContract = {
+    schema: "ameghino.decision.v1",
+    intersection_id: "AR-BA-3F-0142",
+    local_time: clockLabel(ev.hour),
+    phase_request: {
+      axis: ax,
+      green_s: g,
+      min_green_s: cfg.tSeg,
+      amber_s: AMBER_TIME,
+      all_red_s: ALL_RED_TIME,
+    },
+    evidence: ev,
+    priority_profile: cfg,
+    model: {
+      perception: PERCEPTION_MODEL,
+      reasoner: source === "failsafe" ? "descartado (fail-safe)" : REASONER_MODEL,
+      latency_ms: latencyMs,
+    },
+    confidence,
+    source,
+    rationale,
+    validator: {
+      min_green_ok: g >= cfg.tSeg,
+      max_green_ok: g <= cfg.tMax + cfg.weatherMargin,
+      conflicting_green: false,
+      interlock: "hardware+software",
+      accepted: true,
+    },
+    human_in_the_loop: false,
+  };
+
+  return {
+    axis: ax,
+    seconds: g,
+    source,
+    confidence,
+    rationale,
+    action: `VERDE ${ax === "NS" ? "N–S" : "E–O"} · ${g.toFixed(0)} s`,
+    latencyMs,
+    contract,
+  };
+}
+
 export class TrafficEngine {
   vehicles: Vehicle[] = [];
   pedestrians: Pedestrian[] = [];
   decisions: AgentDecision[] = [];
+  config: PriorityConfig = { ...DEFAULT_PRIORITY };
+  /** decisiones tomadas sin intervención humana */
+  autonomousDecisions = 0;
+  /** intervenciones humanas sobre el plan semafórico */
+  humanInterventions = 0;
   detections: Detection[] = [];
   log: LogEntry[] = [];
   history: HistoryPoint[] = [];
