@@ -45278,3 +45278,4 @@
 {"ts": "2026-08-10T20:36:02.294751Z", "action": "EXTENDER_VERDE_EJE_CON_DEMANDA", "seconds": 10.0, "axis": "NS", "confidence": 0.97, "rationale": "El eje secundario muestra mayor demanda y el cruce está libre."}
 {"ts": "2026-08-10T20:36:02.494938Z", "action": "VERDE_INMEDIATO_SIN_CONFLICTO", "seconds": 10.0, "axis": "NS", "confidence": 0.97, "rationale": "Demanda baja y sin conflicto: liberar verde para reducir exposición."}
 {"ts": "2026-08-10T20:36:03.884664Z", "action": "VERDE_INMEDIATO_SIN_CONFLICTO", "seconds": 10.0, "axis": "NS", "confidence": 0.65, "rationale": "Demanda baja y sin conflicto: liberar verde para reducir exposición."}
+{"ts": "2026-08-10T20:44:01.461150Z", "action": "VERDE_INMEDIATO_SIN_CONFLICTO", "seconds": 10.0, "axis": "NS", "confidence": 0.65, "rationale": "Demanda baja y sin conflicto: liberar verde para reducir exposición."}
