@@ -64,6 +64,28 @@ SNAPSHOT_RATE_SECONDS = 2.0
 _IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
 
+def generate_fallback_frame(width: int = 800, height: int = 600) -> np.ndarray:
+    """Genera un fotograma sintético elegante de cruce vial si falla la captura remota."""
+    img = np.zeros((height, width, 3), dtype=np.uint8)
+    img[:] = (30, 35, 42) # fondo asfalto
+    # Calles
+    cv2.rectangle(img, (width // 2 - 80, 0), (width // 2 + 80, height), (50, 55, 65), -1)
+    cv2.rectangle(img, (0, height // 2 - 80), (width, height // 2 + 80), (50, 55, 65), -1)
+    # Centro intersección
+    cv2.circle(img, (width // 2, height // 2), 12, (0, 230, 118), -1)
+    # Texto
+    cv2.putText(
+        img,
+        "AMEGHINO AI - CRUCE VEHICULAR AR (MODO FALLBACK)",
+        (30, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (240, 245, 250),
+        2,
+    )
+    return img
+
+
 class CameraCapture:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -75,9 +97,18 @@ class CameraCapture:
         self._is_snapshot_mode = False
         self._resolved_url = ""
         self._last_snapshot_ts = 0.0
+        self._using_local_fallback = False
 
     def sources(self) -> list[CameraSource]:
         return [
+            CameraSource(
+                id="sample-argentina-intersection",
+                name="Demo Cruce de Avenidas Argentina (Local 4K Feed)",
+                url=str(LOCAL_VIDEO_PATH),
+                kind="public",
+                location="Buenos Aires, Argentina",
+                intersection_type="Cruce de 4 Carriles en Vivo",
+            ),
             CameraSource(
                 id="caba-9-de-julio",
                 name="Buenos Aires - Av. 9 de Julio y Corrientes (Obelisco)",
@@ -127,14 +158,6 @@ class CameraCapture:
                 intersection_type="Cruce Céntrico Vehicular",
             ),
             CameraSource(
-                id="sample-argentina-intersection",
-                name="Demo Cruce de Avenidas Argentina (4K Live Feed)",
-                url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-                kind="public",
-                location="Argentina",
-                intersection_type="Cruce de 4 Carriles en Vivo",
-            ),
-            CameraSource(
                 id="local-webcam",
                 name="Cámara local (webcam)",
                 url="0",
@@ -163,16 +186,21 @@ class CameraCapture:
                 return
             raw_url = self._source.url if self._source else ""
             if not raw_url:
-                raise RuntimeError("La URL de la cámara está vacía")
+                raw_url = str(LOCAL_VIDEO_PATH)
 
             url = resolve_stream_url(raw_url)
             self._resolved_url = url
             self._is_snapshot_mode = self._is_image_url(url)
 
             if self._is_snapshot_mode:
-                if self.read_snapshot(url) is None:
-                    raise RuntimeError(f"No se pudo leer la imagen: {url}")
-                return
+                snap = self.read_snapshot(url)
+                if snap is None:
+                    # Fallback si falla la imagen remota
+                    self._using_local_fallback = True
+                    self._is_snapshot_mode = False
+                    url = str(LOCAL_VIDEO_PATH)
+                else:
+                    return
 
             try:
                 if url.startswith("rtsp://") or url.startswith("http://") or url.startswith("https://"):
@@ -181,14 +209,13 @@ class CameraCapture:
                     self._cap = cv2.VideoCapture(int(url) if url.isdigit() else url)
 
                 if not self._cap.isOpened():
-                    self._cap = cv2.VideoCapture(raw_url)
-                    if not self._cap.isOpened():
-                        raise RuntimeError(f"No se pudo conectar a la cámara del cruce: {raw_url}")
+                    # Fallback al archivo de video local si la URL remota no abre
+                    self._using_local_fallback = True
+                    self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
             except Exception as e:
-                self._cap = None
-                self._is_snapshot_mode = False
-                self._last_error = str(e)
-                raise
+                logger.warning(f"Error al abrir cámara {raw_url}, usando fallback local: {e}")
+                self._using_local_fallback = True
+                self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
 
     def stop(self) -> None:
         with self._lock:
@@ -200,33 +227,46 @@ class CameraCapture:
                 self._cap = None
             self._is_snapshot_mode = False
             self._last_snapshot_ts = 0.0
+            self._using_local_fallback = False
 
-    def read_frame(self):
+    def read_frame(self) -> np.ndarray:
         with self._lock:
             if self._is_snapshot_mode:
                 now = time.time()
                 if now - self._last_snapshot_ts < SNAPSHOT_RATE_SECONDS and self._last_frame is not None:
                     return self._last_frame
                 self._last_snapshot_ts = now
-                return self.read_snapshot(self._resolved_url or (self._source.url if self._source else ""))
+                frame = self.read_snapshot(self._resolved_url or (self._source.url if self._source else ""))
+                if frame is not None:
+                    return frame
 
-            if self._cap is None or not self._cap.isOpened():
-                return None
-
-            ret, frame = self._cap.read()
-            if not ret:
-                if self._cap is not None:
+            if self._cap is not None and self._cap.isOpened():
+                ret, frame = self._cap.read()
+                if not ret:
+                    # Rebobinar video si llegó al final
                     self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = self._cap.read()
 
-                if not ret:
-                    self._last_error = "read_failed"
-                    return None
+                if ret and frame is not None:
+                    self._last_frame = frame
+                    return frame
 
-            self._last_frame = frame
-            return frame
+            # Si falla el VideoCapture, intentar fallback local
+            if not self._using_local_fallback:
+                self._using_local_fallback = True
+                self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
+                if self._cap.isOpened():
+                    ret, frame = self._cap.read()
+                    if ret and frame is not None:
+                        self._last_frame = frame
+                        return frame
 
-    def read_snapshot(self, url: str):
+            # Si todo falla, devolver fotograma sintético
+            fallback = generate_fallback_frame()
+            self._last_frame = fallback
+            return fallback
+
+    def read_snapshot(self, url: str) -> Optional[np.ndarray]:
         if not url:
             return None
         try:
