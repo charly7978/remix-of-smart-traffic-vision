@@ -732,6 +732,22 @@ export function drawScene3D(
 ) {
   ctx.clearRect(0, 0, VIEW, VIEW);
   drawGround(ctx, engine.night);
+  // corredor habilitado: sutil, bajo los objetos
+  {
+    const ax = engine.axis;
+    ctx.save();
+    ctx.globalAlpha = engine.phase === "green" ? 0.16 : 0.06;
+    planeRect(
+      ctx,
+      0,
+      0,
+      ax === "NS" ? ROAD_HALF * 2 : 620,
+      ax === "NS" ? 620 : ROAD_HALF * 2,
+      1.1,
+      engine.phase === "green" ? PAL.green : PAL.amber,
+    );
+    ctx.restore();
+  }
   drawBuildings(ctx, engine.night);
   drawTrees(ctx);
   if (opts.cameras) drawCameras(ctx, engine, now);
@@ -766,21 +782,6 @@ export function drawScene3D(
     ctx.restore();
   }
   if (opts.hud) drawHud(ctx, engine);
-
-  // eje verde: destaca el corredor habilitado
-  const ax = engine.axis;
-  ctx.save();
-  ctx.globalAlpha = engine.phase === "green" ? 0.1 : 0.04;
-  planeRect(
-    ctx,
-    0,
-    0,
-    ax === "NS" ? ROAD_HALF * 2 : 1200,
-    ax === "NS" ? 1200 : ROAD_HALF * 2,
-    1.1,
-    engine.phase === "green" ? PAL.green : PAL.amber,
-  );
-  ctx.restore();
 }
 
 export { axisOf };
