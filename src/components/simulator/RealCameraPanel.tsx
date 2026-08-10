@@ -11,7 +11,7 @@ export function RealCameraPanel({
   onSelectCamera?: (cameraId: string) => void;
 }) {
   const [cameras, setCameras] = useState<CameraSource[]>([]);
-  const [cameraId, setCameraId] = useState<string>("sample-argentina-intersection");
+  const [cameraId, setCameraId] = useState<string>("cordoba-bv-san-juan-velez-sarsfield");
   const [customUrl, setCustomUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "connecting" | "live" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
