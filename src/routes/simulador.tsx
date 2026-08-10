@@ -296,7 +296,7 @@ function SimuladorPage() {
   const [startHour, setStartHour] = useState(7);
 
   // modo real
-  const [sourceMode, setSourceMode] = useState<SourceMode>("synthetic");
+  const [sourceMode, setSourceMode] = useState<SourceMode>("real");
   const [cameraId, setCameraId] = useState("sample-argentina-intersection");
   const [realFrame, setRealFrame] = useState<DetectionFrame | null>(null);
   const realImageRef = useRef<HTMLImageElement | null>(null);
