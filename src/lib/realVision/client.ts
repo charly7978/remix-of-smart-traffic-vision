@@ -41,6 +41,21 @@ export type DetectionFrame = {
   decision?: DecisionPayload;
 };
 
+function normalizeFrame(data: any): DetectionFrame {
+  return {
+    ts: data.ts || Date.now() / 1000,
+    hour: data.hour ?? 12,
+    vehicles: data.vehicles || [],
+    pedestrians: data.pedestrians || [],
+    weather: data.weather || "clear",
+    isNight: data.isNight ?? data.is_night ?? false,
+    laneDensity: data.laneDensity || data.lane_density || { NS: 0, EW: 0 },
+    emergencyDetected: data.emergencyDetected ?? data.emergency_detected ?? false,
+    rawImage: data.image || data.raw_image || data.rawImage || null,
+    decision: data.decision,
+  };
+}
+
 export async function listCameras(): Promise<CameraSource[]> {
   const res = await fetch(`${VISION_BASE}/api/cameras`);
   if (!res.ok) throw new Error("No se pudo obtener el listado de cámaras");
@@ -51,10 +66,7 @@ export async function detectNow(cameraId: string): Promise<DetectionFrame> {
   const res = await fetch(`${VISION_BASE}/api/detect?camera_id=${encodeURIComponent(cameraId)}`);
   if (!res.ok) throw new Error("No se pudo ejecutar la detección");
   const data = await res.json();
-  return {
-    ...data,
-    rawImage: data.image || data.raw_image || data.rawImage || null,
-  };
+  return normalizeFrame(data);
 }
 
 export async function setCameraUrl(url: string): Promise<{ ok: boolean }> {
@@ -80,11 +92,7 @@ export function connectCameraStream(
         onError(new Error(data.error));
         return;
       }
-      const frame: DetectionFrame = {
-        ...data,
-        rawImage: data.image || data.raw_image || data.rawImage || null,
-      };
-      onFrame(frame);
+      onFrame(normalizeFrame(data));
     } catch (err) {
       onError(err as Error);
     }

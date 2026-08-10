@@ -318,8 +318,9 @@ function SimuladorPage() {
     const weather: Weather = frame.weather === "fog" ? "fog" : frame.weather === "rain" ? "rain" : "clear";
     engine.setWeather(weather, true);
     engine.setCameraOffline(false);
-    const ns = frame.laneDensity["NS"] || 0;
-    const ew = frame.laneDensity["EW"] || 0;
+    const laneDensity = frame.laneDensity || {};
+    const ns = laneDensity["NS"] || 0;
+    const ew = laneDensity["EW"] || 0;
     if (ns + ew > 0) {
       engine.setNsShare(ns / (ns + ew));
     }
