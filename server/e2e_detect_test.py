@@ -12,7 +12,7 @@ def main():
     cams = get("http://127.0.0.1:8787/api/cameras")
     print("UTF-8 title:", cams[0]["name"])
     print("count:", len(cams))
-    for cid in ["cordoba-av-olmos-maipu-este", "caba-9-julio-corrientes"]:
+    for cid in ["london-a10-carterhatch-lane", "caba-9-julio-corrientes"]:
         d = get(f"http://127.0.0.1:8787/api/detect?camera_id={cid}")
         print(f"--- {cid} ---")
         print("  vehicles:", len(d["vehicles"]), "pedestrians:", len(d["pedestrians"]))

@@ -45,16 +45,28 @@ def _snap(values: list[float], value: float, step: float) -> float:
     return min(values, key=lambda x: abs(x - value))
 
 
-def detections_to_evidence(detections: DetectionFrame, current_axis: str) -> Evidence:
+def detections_to_evidence(detections: DetectionFrame, current_axis: str = "NS") -> Evidence:
+    """Convierte un DetectionFrame (posiblemente fusionado de las dos cámaras) en Evidence.
+
+    El eje activo NO es fijo: se alterna con histéresis según la demanda medida.
+    Solo se conmuta cuando el eje opuesto supera claramente la demanda actual
+    (umbral 1.35×), evitando parpadeo entre fotogramas.
+    """
     other = "EW" if current_axis == "NS" else "NS"
-    sigma = max(1.0, detections.lane_density.get(current_axis, 0.0))
+    sigma_cur = max(0.0, detections.lane_density.get(current_axis, 0.0))
+    sigma_oth = max(0.0, detections.lane_density.get(other, 0.0))
+
+    switch = (sigma_cur == 0 and sigma_oth > 0) or (sigma_oth > sigma_cur * 1.35)
+    axis = other if switch else current_axis
+    sigma = max(1.0, detections.lane_density.get(axis, 0.0))
     sigma_other = max(0.0, detections.lane_density.get(other, 0.0))
+
     ped_waiting = len(detections.pedestrians)
     return Evidence(
-        axis=current_axis,
+        axis=axis,
         sigma=sigma,
         sigma_other=sigma_other,
-        ped_waiting_other=ped_waiting if other != current_axis else 0,
+        ped_waiting_other=ped_waiting,
         reduced_waiting=False,
         visibility=0.85 if not detections.is_night else 0.55,
         detection_rate=0.9 if detections.vehicles else 0.0,

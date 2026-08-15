@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from camera_capture import CameraCapture, CameraSource, get_capture
 from detector import YoloDetector, DetectionFrame
 from decision import detections_to_evidence, auto_decide
+from sensors import MeasurementEngine, compute_twin, load_calibrations
 
 app = FastAPI(title="Ameghino AI Vision")
 
@@ -88,10 +89,17 @@ config = {
     "emergency_boost": 24.0,
 }
 
+meas_engine = MeasurementEngine(load_calibrations())
+
 
 @app.get("/api/cameras")
 def list_cameras() -> JSONResponse:
     return JSONResponse([s.__dict__ for s in capture.sources()])
+
+
+@app.get("/api/calibrations")
+def list_calibrations() -> JSONResponse:
+    return JSONResponse({"camera_ids": meas_engine.calibration_ids()})
 
 
 @app.post("/api/camera-url")
@@ -112,7 +120,7 @@ def set_camera_url(payload: dict) -> JSONResponse:
 
 
 @app.get("/api/detect")
-def detect_now(camera_id: str = "london-purley-way-croydon-road") -> JSONResponse:
+def detect_now(camera_id: str = "london-a10-carterhatch-lane") -> JSONResponse:
     source = next((s for s in capture.sources() if s.id == camera_id), None)
     if source is None:
         return JSONResponse({"error": "camera_not_found"}, status_code=404)
@@ -130,9 +138,11 @@ def detect_now(camera_id: str = "london-purley-way-croydon-road") -> JSONRespons
 
     ts = time.time()
     hour = (time.localtime().tm_hour + time.localtime().tm_min / 60) % 24
-    detection = detector.detect(frame, ts, hour)
+    detection = detector.detect(frame, ts, hour, tracker_key=camera_id)
+    global current_axis
     evidence = detections_to_evidence(detection, current_axis)
     decision = auto_decide(evidence, config)
+    current_axis = decision.axis if decision else current_axis
 
     annotated = detector.annotate_frame(
         frame,
@@ -181,8 +191,8 @@ def _fusion(a: DetectionFrame, b: DetectionFrame) -> DetectionFrame:
 
 @app.get("/api/detect_dual")
 def detect_dual(
-    axis_a_camera_id: str = "london-purley-way-croydon-road",
-    axis_b_camera_id: str = "london-lewisham-way-parkfield",
+    axis_a_camera_id: str = "london-a10-carterhatch-lane",
+    axis_b_camera_id: str = "london-camberwell-church-street",
 ) -> JSONResponse:
     """Ejecuta detección simultánea sobre las dos cámaras del cruce simulado."""
     sources = {s.id: s for s in capture.sources()}
@@ -198,14 +208,19 @@ def detect_dual(
 
     ts = time.time()
     hour = (time.localtime().tm_hour + time.localtime().tm_min / 60) % 24
-    det_a = detector.detect(frame_a, ts, hour)
-    det_b = detector.detect(frame_b, ts, hour)
+    det_a = detector.detect(frame_a, ts, hour, tracker_key=axis_a_camera_id)
+    det_b = detector.detect(frame_b, ts, hour, tracker_key=axis_b_camera_id)
     fused = _fusion(det_a, det_b)
 
+    global current_axis
     evidence = detections_to_evidence(fused, current_axis)
     decision = auto_decide(evidence, config)
+    current_axis = decision.axis if decision else current_axis
     active_axis = decision.axis if decision else "NS"
     sec_rem = decision.seconds if decision else 20.0
+
+    measures_a, _cal_a = meas_engine.measure(axis_a_camera_id, det_a, ts)
+    measures_b, _cal_b = meas_engine.measure(axis_b_camera_id, det_b, ts)
 
     ann_a = detector.annotate_frame(
         frame_a,
@@ -230,6 +245,12 @@ def detect_dual(
     payload = build_frame_payload(fused, decision, jpg_a)
     payload["image_b"] = jpg_b
     payload["camera_ids"] = {"axis_a": axis_a_camera_id, "axis_b": axis_b_camera_id}
+    payload["analyticsA"] = {k: v.to_dict() for k, v in measures_a.items()}
+    payload["analyticsB"] = {k: v.to_dict() for k, v in measures_b.items()}
+    cal_ok = meas_engine.is_calibrated(axis_a_camera_id) and meas_engine.is_calibrated(axis_b_camera_id)
+    twin = compute_twin(measures_a, measures_b, decision, ts, calibration_ok=cal_ok)
+    payload["twin"] = twin.to_dict()
+    payload["twin"]["calibrationOk"] = cal_ok
     return JSONResponse(payload)
 
 
@@ -263,14 +284,17 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
 
             ts = time.time()
             hour = ((time.localtime().tm_hour + time.localtime().tm_min / 60) % 24)
-            detection = detector.detect(frame, ts, hour)
+            detection = detector.detect(frame, ts, hour, tracker_key=camera_id)
 
             if last_decision is None or ts - last_decision_ts >= 3.0:
+                global current_axis
                 evidence = detections_to_evidence(detection, current_axis)
                 last_decision = auto_decide(evidence, config)
+                if last_decision and last_decision.axis:
+                    current_axis = last_decision.axis
                 last_decision_ts = ts
 
-            axis_lbl = "EJE A (N-S)" if "san-martin" in camera_id or "purley" in camera_id else "EJE B (E-O)"
+            axis_lbl = "EJE A (N-S)" if "san-martin" in camera_id or "carterhatch" in camera_id or "purley" in camera_id else "EJE B (E-O)"
             is_grn = last_decision.axis == ("NS" if "EJE A" in axis_lbl else "EW") if last_decision else True
             annotated = detector.annotate_frame(
                 frame,
@@ -293,8 +317,8 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
 @app.websocket("/ws/camera_dual")
 async def ws_camera_dual(
     websocket: WebSocket,
-    axis_a_camera_id: str = "london-purley-way-croydon-road",
-    axis_b_camera_id: str = "london-lewisham-way-parkfield",
+    axis_a_camera_id: str = "london-a10-carterhatch-lane",
+    axis_b_camera_id: str = "london-camberwell-church-street",
 ) -> None:
     """Stream continuo del cruce simulado: las DOS cámaras en vivo a la vez con IA anotada."""
     await websocket.accept()
@@ -329,13 +353,18 @@ async def ws_camera_dual(
 
             ts = time.time()
             hour = ((time.localtime().tm_hour + time.localtime().tm_min / 60) % 24)
-            det_a = detector.detect(frame_a, ts, hour)
-            det_b = detector.detect(frame_b, ts, hour)
+            det_a = detector.detect(frame_a, ts, hour, tracker_key=axis_a_camera_id)
+            det_b = detector.detect(frame_b, ts, hour, tracker_key=axis_b_camera_id)
+            measures_a, _cal_a = meas_engine.measure(axis_a_camera_id, det_a, ts)
+            measures_b, _cal_b = meas_engine.measure(axis_b_camera_id, det_b, ts)
             fused = _fusion(det_a, det_b)
 
             if last_decision is None or ts - last_decision_ts >= 3.0:
+                global current_axis
                 evidence = detections_to_evidence(fused, current_axis)
                 last_decision = auto_decide(evidence, config)
+                if last_decision and last_decision.axis:
+                    current_axis = last_decision.axis
                 last_decision_ts = ts
 
             act_axis = last_decision.axis if last_decision else "NS"
@@ -362,6 +391,13 @@ async def ws_camera_dual(
             payload = build_frame_payload(fused, last_decision, base64.b64encode(buf_a).decode("utf-8"))
             payload["image_b"] = base64.b64encode(buf_b).decode("utf-8")
             payload["camera_ids"] = {"axis_a": axis_a_camera_id, "axis_b": axis_b_camera_id}
+            # Enriquecer con mediciones por acceso y estado del gemelo digital
+            payload["analyticsA"] = {k: v.to_dict() for k, v in measures_a.items()}
+            payload["analyticsB"] = {k: v.to_dict() for k, v in measures_b.items()}
+            cal_ok = meas_engine.is_calibrated(axis_a_camera_id) and meas_engine.is_calibrated(axis_b_camera_id)
+            twin = compute_twin(measures_a, measures_b, last_decision, ts, calibration_ok=cal_ok)
+            payload["twin"] = twin.to_dict()
+            payload["twin"]["calibrationOk"] = cal_ok
             await websocket.send_json(payload)
             await asyncio.sleep(0.06)
     except WebSocketDisconnect:

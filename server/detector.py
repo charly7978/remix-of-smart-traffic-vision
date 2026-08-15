@@ -66,6 +66,8 @@ class DetectionFrame:
     lane_density: dict[str, float]
     emergency_detected: bool
     raw_image: Optional[str] = None
+    measures: Optional[dict] = None  # dict[str, ApproachMeasure] llenado por sensors.py
+    calibration_ok: bool = False
 
 
 class YoloDetector:
@@ -76,10 +78,13 @@ class YoloDetector:
         self._ultralytics_model: Any | None = None
         self._net: cv2.dnn.Net | None = None
         self._input_size = 640
-        self._prev_centroids: list[tuple[float, float, float]] = []  # cx, cy, ts
+        self._prev_centroids: dict[str, list[tuple[float, float, float]]] = {}  # tracker_key -> [(cx, cy, ts)]
 
         try:
-            from ultralytics import YOLO
+            # ultralytics es OPCIONAL: si no está instalado, el detector cae
+            # automáticamente al backend OpenCV DNN + modelo ONNX.
+            # Ver server/requirements-ml.txt.
+            from ultralytics import YOLO  # type: ignore[import-not-found]
 
             self._ultralytics_model = YOLO(model_name)
             self._backend = "ultralytics"
@@ -98,7 +103,7 @@ class YoloDetector:
         except Exception:
             return None
 
-    def detect(self, frame: np.ndarray, ts: float, hour: float) -> DetectionFrame:
+    def detect(self, frame: np.ndarray, ts: float, hour: float, tracker_key: str = "default") -> DetectionFrame:
         if self._backend == "ultralytics" and self._ultralytics_model is not None:
             result = self._detect_ultralytics(frame)
         elif self._backend == "opencv" and self._net is not None:
@@ -112,6 +117,7 @@ class YoloDetector:
         emergency_detected = False
 
         current_centroids: list[tuple[float, float, float]] = []
+        prev_centroids = self._prev_centroids.get(tracker_key, [])
 
         for item in result:
             name, conf, x1, y1, x2, y2 = item
@@ -133,10 +139,11 @@ class YoloDetector:
                 emergency_detected = True
 
             # Estimación de velocidad básica por desplazamiento de centroides más cercanos
+            # (el tracker es por cámara: cada flujo mantiene su propio historial de centroides)
             speed_est = 25.0
-            if self._prev_centroids:
+            if prev_centroids:
                 min_dist = float("inf")
-                for pcx, pcy, pts in self._prev_centroids:
+                for pcx, pcy, pts in prev_centroids:
                     dt = max(0.01, ts - pts)
                     dist = math.hypot(cx - pcx, cy - pcy)
                     if dist < min_dist:
@@ -163,7 +170,7 @@ class YoloDetector:
                 )
             )
 
-        self._prev_centroids = current_centroids[:20]
+        self._prev_centroids[tracker_key] = current_centroids[:20]
 
         lane_density = {"NS": 0.0, "EW": 0.0}
         for v in vehicles:

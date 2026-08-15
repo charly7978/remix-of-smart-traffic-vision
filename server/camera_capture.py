@@ -76,17 +76,17 @@ BROWSER_HEADERS = {
 
 INTERSECTION_CAMERAS: list[CameraSource] = [
     CameraSource(
-        id="london-purley-way-croydon-road",
-        name="Eje A (N-S) · Av. San Martín [Cruce Simulado] / Purley Way",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04564.mp4",
+        id="london-a10-carterhatch-lane",
+        name="Eje A (N-S) · Av. San Martín [Cruce Simulado] / A10 Carterhatch Ln",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.01467.mp4",
         kind="public",
         location="Cruce Principal (Eje Norte–Sur)",
         intersection_type="Cruce de Avenida con Semáforos",
     ),
     CameraSource(
-        id="london-lewisham-way-parkfield",
-        name="Eje B (E-O) · Av. Urquiza [Cruce Simulado] / Lewisham Way",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03700.mp4",
+        id="london-camberwell-church-street",
+        name="Eje B (E-O) · Av. Urquiza [Cruce Simulado] / Camberwell Ch St & Green",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04338.mp4",
         kind="public",
         location="Cruce Transversal (Eje Este–Oeste)",
         intersection_type="Cruce Transversal con Semáforos",

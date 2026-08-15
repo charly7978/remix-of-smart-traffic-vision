@@ -30,9 +30,9 @@ export function RealCameraPanel({
 }) {
   const [cameras, setCameras] = useState<CameraSource[]>([]);
   const [mode, setMode] = useState<"dual" | "single">("dual");
-  const [cameraId, setCameraId] = useState<string>("london-purley-way-croydon-road");
-  const [dualAxisA, setDualAxisA] = useState<string>("london-purley-way-croydon-road");
-  const [dualAxisB, setDualAxisB] = useState<string>("london-lewisham-way-parkfield");
+  const [cameraId, setCameraId] = useState<string>("london-a10-carterhatch-lane");
+  const [dualAxisA, setDualAxisA] = useState<string>("london-a10-carterhatch-lane");
+  const [dualAxisB, setDualAxisB] = useState<string>("london-camberwell-church-street");
   const [customUrl, setCustomUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "connecting" | "live" | "error">("idle");
   const [error, setError] = useState<string | null>(null);

@@ -1,0 +1,18 @@
+[
+  {
+    "camera_id": "london-a10-carterhatch-lane",
+    "primary_axis": "NS",
+    "approach_side": 0.5,
+    "stop_zone": [{"x": 0.10, "y": 0.50}, {"x": 0.90, "y": 0.50}, {"x": 0.90, "y": 0.92}, {"x": 0.10, "y": 0.92}],
+    "density_zone": [{"x": 0.10, "y": 0.28}, {"x": 0.90, "y": 0.28}, {"x": 0.90, "y": 0.92}, {"x": 0.10, "y": 0.92}],
+    "signal_position": {"x": 0.84, "y": 0.10}
+  },
+  {
+    "camera_id": "london-camberwell-church-street",
+    "primary_axis": "EW",
+    "approach_side": 0.5,
+    "stop_zone": [{"x": 0.42, "y": 0.12}, {"x": 0.58, "y": 0.12}, {"x": 0.58, "y": 0.88}, {"x": 0.42, "y": 0.88}],
+    "density_zone": [{"x": 0.30, "y": 0.08}, {"x": 0.70, "y": 0.08}, {"x": 0.70, "y": 0.92}, {"x": 0.30, "y": 0.92}],
+    "signal_position": {"x": 0.12, "y": 0.12}
+  }
+]
