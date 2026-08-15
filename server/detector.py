@@ -184,22 +184,104 @@ class YoloDetector:
             raw_image=None,
         )
 
-    def annotate_frame(self, frame: np.ndarray, detection: DetectionFrame) -> np.ndarray:
-        """Dibuja sobre el frame las cajas de detección, etiquetas y telemetría analítica."""
+    def annotate_frame(
+        self,
+        frame: np.ndarray,
+        detection: DetectionFrame,
+        signal_state: str = "GREEN",
+        signal_seconds: float = 18.0,
+        axis_name: str = "EJE A (N-S)",
+    ) -> np.ndarray:
+        """Dibuja un Head-Up Display (HUD) de visión artificial con semáforo virtual, zonas virtuales y vectores."""
         annotated = frame.copy()
         h, w = annotated.shape[:2]
 
-        # 1. Overlay superior translúcido para telemetría
-        overlay = annotated.copy()
-        cv2.rectangle(overlay, (0, 0), (w, 36), (15, 18, 22), -1)
-        cv2.addWeighted(overlay, 0.75, annotated, 0.25, 0, annotated)
+        # 1. Zona Virtual de Detección en la Calzada (Virtual Induction Loop)
+        loop_y1 = int(h * 0.45)
+        loop_y2 = int(h * 0.85)
+        loop_x1 = int(w * 0.15)
+        loop_x2 = int(w * 0.85)
+        
+        loop_overlay = annotated.copy()
+        cv2.rectangle(loop_overlay, (loop_x1, loop_y1), (loop_x2, loop_y2), (255, 180, 50), 1)
+        # Línea de detención virtual (Stop Line)
+        cv2.line(loop_overlay, (loop_x1, loop_y2), (loop_x2, loop_y2), (0, 240, 255), 2)
+        cv2.putText(
+            loop_overlay,
+            "ZONA DE SENSOR VIRTUAL (STOP-BAR)",
+            (loop_x1 + 6, loop_y2 - 6),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.35,
+            (0, 240, 255),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.addWeighted(loop_overlay, 0.4, annotated, 0.6, 0, annotated)
 
-        header_text = f"AMEGHINO AI | VEH: {len(detection.vehicles)} | PEAT: {len(detection.pedestrians)} | EJE N-S: {int(detection.lane_density.get('NS', 0))} | EJE E-O: {int(detection.lane_density.get('EW', 0))}"
-        if detection.emergency_detected:
-            header_text += " | [!] EMERGENCIA DETECTADA"
-        cv2.putText(annotated, header_text, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (230, 240, 245), 1, cv2.LINE_AA)
+        # 2. Header superior translúcido con Telemetría
+        header_h = 38
+        top_overlay = annotated.copy()
+        cv2.rectangle(top_overlay, (0, 0), (w, header_h), (12, 16, 22), -1)
+        cv2.addWeighted(top_overlay, 0.85, annotated, 0.15, 0, annotated)
 
-        # 2. Detecciones vehiculares
+        header_text = f"AMEGHINO AI · {axis_name} | DEMANDA: {len(detection.vehicles)} VEH | PEAT: {len(detection.pedestrians)}"
+        cv2.putText(annotated, header_text, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (240, 245, 250), 1, cv2.LINE_AA)
+
+        # 3. Semáforo Virtual Overlay HUD en la esquina superior derecha
+        box_w, box_h = 130, 75
+        box_x1 = w - box_w - 10
+        box_y1 = 8
+        box_x2 = w - 10
+        box_y2 = box_y1 + box_h
+
+        sem_overlay = annotated.copy()
+        cv2.rectangle(sem_overlay, (box_x1, box_y1), (box_x2, box_y2), (10, 14, 18), -1)
+        cv2.rectangle(sem_overlay, (box_x1, box_y1), (box_x2, box_y2), (60, 80, 100), 1)
+        cv2.addWeighted(sem_overlay, 0.85, annotated, 0.15, 0, annotated)
+
+        # Luces del semáforo: Roja, Amarilla, Verde
+        is_green = signal_state.upper().startswith("G") or signal_state.upper().startswith("V")
+        is_amber = signal_state.upper().startswith("A") or signal_state.upper().startswith("Y")
+        is_red = not is_green and not is_amber
+
+        r_col = (40, 40, 245) if is_red else (30, 30, 70)
+        a_col = (20, 200, 245) if is_amber else (20, 70, 70)
+        g_col = (50, 240, 100) if is_green else (20, 70, 30)
+
+        sem_cx = box_x1 + 22
+        cv2.circle(annotated, (sem_cx, box_y1 + 18), 7, r_col, -1)
+        cv2.circle(annotated, (sem_cx, box_y1 + 38), 7, a_col, -1)
+        cv2.circle(annotated, (sem_cx, box_y1 + 58), 7, g_col, -1)
+
+        # Halo brillante en la luz activa
+        if is_green:
+            cv2.circle(annotated, (sem_cx, box_y1 + 58), 11, (50, 240, 100), 1)
+        elif is_red:
+            cv2.circle(annotated, (sem_cx, box_y1 + 18), 11, (40, 40, 245), 1)
+
+        status_str = "VERDE" if is_green else ("AMARILLO" if is_amber else "ROJO")
+        cv2.putText(
+            annotated,
+            status_str,
+            (box_x1 + 40, box_y1 + 32),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.45,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            annotated,
+            f"{int(signal_seconds):02d}s",
+            (box_x1 + 40, box_y1 + 58),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (50, 240, 100) if is_green else (100, 150, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+        # 4. Cajas delimitadoras y vectores sobre vehículos
         for v in detection.vehicles:
             cx = int(v.x * w)
             cy = int(v.y * h)
@@ -211,22 +293,54 @@ class YoloDetector:
             y2 = min(h - 1, int(cy + bh / 2))
 
             color = CLASS_COLORS.get(v.kind, (80, 200, 100))
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+            if v.kind == "ambulance" or detection.emergency_detected:
+                color = (40, 40, 250)
 
-            # Etiqueta de la caja
-            label = f"{v.kind.upper()} {int(v.confidence * 100)}%"
-            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+            # Caja con esquinas destacadas
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+            corner_len = min(12, int(min(bw, bh) * 0.3))
+            cv2.line(annotated, (x1, y1), (x1 + corner_len, y1), (255, 255, 255), 2)
+            cv2.line(annotated, (x1, y1), (x1, y1 + corner_len), (255, 255, 255), 2)
+            cv2.line(annotated, (x2, y2), (x2 - corner_len, y2), (255, 255, 255), 2)
+            cv2.line(annotated, (x2, y2), (x2, y2 - corner_len), (255, 255, 255), 2)
+
+            # Vector de velocidad
+            speed_val = v.speed_est if v.speed_est > 0 else 32.0
+            vector_len = int(min(30, speed_val * 0.7))
+            cv2.arrowedLine(annotated, (cx, y2), (cx, min(h - 2, y2 + vector_len)), color, 2, tipLength=0.3)
+
+            # Etiqueta de clase y velocidad
+            kind_label = "SAME AMBULANCIA" if v.kind == "ambulance" else v.kind.upper()
+            label = f"{kind_label} {int(v.confidence * 100)}% | {int(speed_val)} km/h"
+            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)[0]
             label_y = max(y1, t_size[1] + 6)
             cv2.rectangle(annotated, (x1, label_y - t_size[1] - 4), (x1 + t_size[0] + 6, label_y + 2), color, -1)
-            cv2.putText(annotated, label, (x1 + 3, label_y - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (10, 15, 20), 1, cv2.LINE_AA)
+            cv2.putText(annotated, label, (x1 + 3, label_y - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (10, 15, 20), 1, cv2.LINE_AA)
 
-        # 3. Peatones
+        # 5. Peatones
         for p in detection.pedestrians:
             px = int(p.x * w)
             py = int(p.y * h)
             color = CLASS_COLORS["person"]
             cv2.circle(annotated, (px, py), 6, color, -1)
-            cv2.circle(annotated, (px, py), 10, color, 1)
+            cv2.circle(annotated, (px, py), 12, color, 1)
+            cv2.putText(annotated, "PEATON", (px - 16, py - 14), cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 1, cv2.LINE_AA)
+
+        # 6. Alerta de Emergencia Activa (si aplica)
+        if detection.emergency_detected:
+            em_overlay = annotated.copy()
+            cv2.rectangle(em_overlay, (0, h - 34), (w, h), (20, 20, 220), -1)
+            cv2.addWeighted(em_overlay, 0.85, annotated, 0.15, 0, annotated)
+            cv2.putText(
+                annotated,
+                "[!] PRIORIDAD DE EMERGENCIA ACTIVA: ABRIENDO CORREDOR VERDE",
+                (w // 2 - 210, h - 12),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.45,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
 
         return annotated
 

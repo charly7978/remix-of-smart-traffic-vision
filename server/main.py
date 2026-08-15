@@ -134,7 +134,13 @@ def detect_now(camera_id: str = "london-purley-way-croydon-road") -> JSONRespons
     evidence = detections_to_evidence(detection, current_axis)
     decision = auto_decide(evidence, config)
 
-    annotated = detector.annotate_frame(frame, detection)
+    annotated = detector.annotate_frame(
+        frame,
+        detection,
+        signal_state="GREEN" if decision.axis == "NS" else "RED",
+        signal_seconds=decision.seconds,
+        axis_name="EJE A (N-S) · AV. SAN MARTÍN",
+    )
     _, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
     jpg = base64.b64encode(buffer).decode("utf-8")
 
@@ -198,9 +204,23 @@ def detect_dual(
 
     evidence = detections_to_evidence(fused, current_axis)
     decision = auto_decide(evidence, config)
+    active_axis = decision.axis if decision else "NS"
+    sec_rem = decision.seconds if decision else 20.0
 
-    ann_a = detector.annotate_frame(frame_a, det_a)
-    ann_b = detector.annotate_frame(frame_b, det_b)
+    ann_a = detector.annotate_frame(
+        frame_a,
+        det_a,
+        signal_state="GREEN" if active_axis == "NS" else "RED",
+        signal_seconds=sec_rem,
+        axis_name="EJE A (N-S) · AV. SAN MARTÍN",
+    )
+    ann_b = detector.annotate_frame(
+        frame_b,
+        det_b,
+        signal_state="GREEN" if active_axis == "EW" else "RED",
+        signal_seconds=sec_rem,
+        axis_name="EJE B (E-O) · AV. URQUIZA",
+    )
 
     _, buf_a = cv2.imencode(".jpg", ann_a, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
     _, buf_b = cv2.imencode(".jpg", ann_b, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
@@ -250,7 +270,15 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
                 last_decision = auto_decide(evidence, config)
                 last_decision_ts = ts
 
-            annotated = detector.annotate_frame(frame, detection)
+            axis_lbl = "EJE A (N-S)" if "san-martin" in camera_id or "purley" in camera_id else "EJE B (E-O)"
+            is_grn = last_decision.axis == ("NS" if "EJE A" in axis_lbl else "EW") if last_decision else True
+            annotated = detector.annotate_frame(
+                frame,
+                detection,
+                signal_state="GREEN" if is_grn else "RED",
+                signal_seconds=last_decision.seconds if last_decision else 18.0,
+                axis_name=axis_lbl,
+            )
             _, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             jpg = base64.b64encode(buffer).decode("utf-8")
 
@@ -310,8 +338,23 @@ async def ws_camera_dual(
                 last_decision = auto_decide(evidence, config)
                 last_decision_ts = ts
 
-            ann_a = detector.annotate_frame(frame_a, det_a)
-            ann_b = detector.annotate_frame(frame_b, det_b)
+            act_axis = last_decision.axis if last_decision else "NS"
+            sec_val = last_decision.seconds if last_decision else 18.0
+
+            ann_a = detector.annotate_frame(
+                frame_a,
+                det_a,
+                signal_state="GREEN" if act_axis == "NS" else "RED",
+                signal_seconds=sec_val,
+                axis_name="EJE A (N-S) · AV. SAN MARTÍN",
+            )
+            ann_b = detector.annotate_frame(
+                frame_b,
+                det_b,
+                signal_state="GREEN" if act_axis == "EW" else "RED",
+                signal_seconds=sec_val,
+                axis_name="EJE B (E-O) · AV. URQUIZA",
+            )
 
             _, buf_a = cv2.imencode(".jpg", ann_a, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             _, buf_b = cv2.imencode(".jpg", ann_b, [int(cv2.IMWRITE_JPEG_QUALITY), 75])

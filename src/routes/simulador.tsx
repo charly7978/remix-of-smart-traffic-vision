@@ -592,6 +592,21 @@ function SimuladorPage() {
           <RealCameraPanel
             onFrame={handleRealFrame}
             onSelectCamera={(id) => setCameraId(id)}
+            onTriggerEmergency={() => engineRef.current?.triggerEmergency()}
+            onTriggerNight={() => {
+              const e = engineRef.current;
+              if (e) {
+                e.setHour(3.0);
+                e.setNsShare(0.8);
+                e.setMinutesPerSecond(1.5);
+              }
+            }}
+            onTriggerPedestrian={() => {
+              const e = engineRef.current;
+              if (e) {
+                for (let i = 0; i < 4; i++) e.spawnPedestrian(i % 2 === 0 ? "NS" : "EW");
+              }
+            }}
           />
         </div>
       )}
