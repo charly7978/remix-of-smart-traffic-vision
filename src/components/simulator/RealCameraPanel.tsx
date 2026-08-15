@@ -87,7 +87,7 @@ export function RealCameraPanel({
           setCameraId(first);
           onSelectCamera?.(first);
           // Cargar automáticamente el primer fotograma en vivo
-          detectNow(first).then(handleFrame).catch(() => {});
+          detectNow(first).then(handleFrame).catch(() => { });
         }
         setStatus("idle");
       })

@@ -43,6 +43,7 @@ def _vehicle_to_dict(v) -> dict:
         "confidence": _json_safe(v.confidence),
         "lane": v.lane,
         "sizeClass": v.size_class,
+        "speedEst": _json_safe(getattr(v, "speed_est", 25.0)),
     }
 
 
@@ -59,12 +60,12 @@ def build_frame_payload(detection: DetectionFrame, decision, jpg_b64: str) -> di
         "emergencyDetected": detection.emergency_detected,
         "image": jpg_b64,
         "decision": {
-            "action": decision.action,
-            "seconds": round(decision.seconds, 1),
-            "axis": decision.axis,
-            "confidence": round(decision.confidence, 2),
-            "rationale": decision.rationale,
-            "contract": decision.contract,
+            "action": decision.action if decision else "MANTENER_CICLO",
+            "seconds": round(decision.seconds, 1) if decision else 20.0,
+            "axis": decision.axis if decision else "NS",
+            "confidence": round(decision.confidence, 2) if decision else 0.85,
+            "rationale": decision.rationale if decision else "Análisis en tiempo real",
+            "contract": decision.contract if decision else {},
         },
     })
 
@@ -98,7 +99,7 @@ def set_camera_url(payload: dict) -> JSONResponse:
     url = str(payload.get("url", "")).strip()
     if not url:
         return JSONResponse({"error": "url_required"}, status_code=400)
-    source = CameraSource(id="public-url", name="URL pública personalizada", url=url, kind="public", location="Custom")
+    source = CameraSource(id="public-url", name="URL pública personalizada", url=url, kind="public", location="Personalizada")
     try:
         capture.set_source(source)
         capture.start()
@@ -111,7 +112,7 @@ def set_camera_url(payload: dict) -> JSONResponse:
 
 
 @app.get("/api/detect")
-def detect_now(camera_id: str = "local-webcam") -> JSONResponse:
+def detect_now(camera_id: str = "london-purley-way-croydon-road") -> JSONResponse:
     source = next((s for s in capture.sources() if s.id == camera_id), None)
     if source is None:
         return JSONResponse({"error": "camera_not_found"}, status_code=404)
@@ -133,7 +134,8 @@ def detect_now(camera_id: str = "local-webcam") -> JSONResponse:
     evidence = detections_to_evidence(detection, current_axis)
     decision = auto_decide(evidence, config)
 
-    _, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+    annotated = detector.annotate_frame(frame, detection)
+    _, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
     jpg = base64.b64encode(buffer).decode("utf-8")
 
     return JSONResponse(build_frame_payload(detection, decision, jpg))
@@ -155,10 +157,8 @@ def _read_source_frame(camera_id: str, source: CameraSource) -> tuple[Optional[n
 def _fusion(a: DetectionFrame, b: DetectionFrame) -> DetectionFrame:
     """Fusiona las dos cámaras del cruce simulado: cada cámara aporta su eje.
 
-    Cámara A = eje N-S (autos de frente a la cámara de un lado del cruce),
-    Cámara B = eje E-O (autos de frente a la cámara del otro lado del cruce).
-    El conteo de cada cámara alimenta la densidad de su propio eje, que es
-    exactamente como se calcularía con dos cámaras reales en la misma esquina.
+    Cámara A = eje N-S (Av. San Martín / aproximación N-S),
+    Cámara B = eje E-O (Av. Urquiza / aproximación E-O).
     """
     return DetectionFrame(
         ts=(a.ts + b.ts) / 2.0,
@@ -178,12 +178,7 @@ def detect_dual(
     axis_a_camera_id: str = "london-purley-way-croydon-road",
     axis_b_camera_id: str = "london-lewisham-way-parkfield",
 ) -> JSONResponse:
-    """Simula las DOS cámaras de un mismo cruce (una por eje con semáforo).
-
-    Como no hay un único cruce del que podamos tomar ambas cámaras en vivo,
-    usamos dos tomas reales de frente al tráfico de cada calle y las tratamos
-    como las dos cámaras del mismo cruce (solo a fines de probar la IA).
-    """
+    """Ejecuta detección simultánea sobre las dos cámaras del cruce simulado."""
     sources = {s.id: s for s in capture.sources()}
     if axis_a_camera_id not in sources or axis_b_camera_id not in sources:
         return JSONResponse({"error": "camera_not_found"}, status_code=404)
@@ -204,8 +199,11 @@ def detect_dual(
     evidence = detections_to_evidence(fused, current_axis)
     decision = auto_decide(evidence, config)
 
-    _, buf_a = cv2.imencode(".jpg", frame_a, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-    _, buf_b = cv2.imencode(".jpg", frame_b, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+    ann_a = detector.annotate_frame(frame_a, det_a)
+    ann_b = detector.annotate_frame(frame_b, det_b)
+
+    _, buf_a = cv2.imencode(".jpg", ann_a, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+    _, buf_b = cv2.imencode(".jpg", ann_b, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
     jpg_a = base64.b64encode(buf_a).decode("utf-8")
     jpg_b = base64.b64encode(buf_b).decode("utf-8")
 
@@ -247,18 +245,17 @@ async def ws_camera(websocket: WebSocket, camera_id: str) -> None:
             hour = ((time.localtime().tm_hour + time.localtime().tm_min / 60) % 24)
             detection = detector.detect(frame, ts, hour)
 
-            # La decisión se recalcula y se registra cada 5 s (el video sigue
-            # fluyendo a ~20 fps sin saturar el log de evidencia).
-            if last_decision is None or ts - last_decision_ts >= 5.0:
+            if last_decision is None or ts - last_decision_ts >= 3.0:
                 evidence = detections_to_evidence(detection, current_axis)
                 last_decision = auto_decide(evidence, config)
                 last_decision_ts = ts
 
-            _, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            annotated = detector.annotate_frame(frame, detection)
+            _, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             jpg = base64.b64encode(buffer).decode("utf-8")
 
             await websocket.send_json(build_frame_payload(detection, last_decision, jpg))
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.06)
     except WebSocketDisconnect:
         pass
     finally:
@@ -271,12 +268,7 @@ async def ws_camera_dual(
     axis_a_camera_id: str = "london-purley-way-croydon-road",
     axis_b_camera_id: str = "london-lewisham-way-parkfield",
 ) -> None:
-    """Stream continuo del cruce simulado: las DOS cámaras en vivo a la vez.
-
-    Cada cámara alimenta su eje (A = N-S, B = E-O) y el video de ambas fluye
-    junto con la decisión fusionada, como si fueran las dos cámaras reales
-    del mismo cruce.
-    """
+    """Stream continuo del cruce simulado: las DOS cámaras en vivo a la vez con IA anotada."""
     await websocket.accept()
     sources = {s.id: s for s in capture.sources()}
     if axis_a_camera_id not in sources or axis_b_camera_id not in sources:
@@ -313,19 +305,22 @@ async def ws_camera_dual(
             det_b = detector.detect(frame_b, ts, hour)
             fused = _fusion(det_a, det_b)
 
-            if last_decision is None or ts - last_decision_ts >= 5.0:
+            if last_decision is None or ts - last_decision_ts >= 3.0:
                 evidence = detections_to_evidence(fused, current_axis)
                 last_decision = auto_decide(evidence, config)
                 last_decision_ts = ts
 
-            _, buf_a = cv2.imencode(".jpg", frame_a, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
-            _, buf_b = cv2.imencode(".jpg", frame_b, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            ann_a = detector.annotate_frame(frame_a, det_a)
+            ann_b = detector.annotate_frame(frame_b, det_b)
+
+            _, buf_a = cv2.imencode(".jpg", ann_a, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            _, buf_b = cv2.imencode(".jpg", ann_b, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
 
             payload = build_frame_payload(fused, last_decision, base64.b64encode(buf_a).decode("utf-8"))
             payload["image_b"] = base64.b64encode(buf_b).decode("utf-8")
             payload["camera_ids"] = {"axis_a": axis_a_camera_id, "axis_b": axis_b_camera_id}
             await websocket.send_json(payload)
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.06)
     except WebSocketDisconnect:
         pass
     finally:
@@ -342,3 +337,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8787, reload=True)
+

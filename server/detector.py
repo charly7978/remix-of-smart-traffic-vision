@@ -1,3 +1,4 @@
+import math
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,17 @@ CLASS_MAP = {
     8: "ambulance",
 }
 
-# Clases aceptadas como vehículo en el conteo de densidad.
+# Colores BGR para visualización analítica en vivo
+CLASS_COLORS = {
+    "car": (80, 200, 100),       # Verde Esmeralda
+    "bus": (20, 160, 245),       # Ámbar Transporte
+    "truck": (240, 140, 60),     # Azul/Índigo Carga
+    "moto": (220, 180, 20),      # Cyan Dos Ruedas
+    "bicycle": (200, 200, 30),   # Cyan Claro
+    "ambulance": (50, 50, 240),  # Rojo Emergencia
+    "person": (240, 90, 180),    # Magenta Peatón
+}
+
 _VEHICLE_NAMES = {"car", "motorcycle", "bus", "truck", "ambulance", "bicycle"}
 
 
@@ -34,6 +45,7 @@ class Vehicle:
     confidence: float
     lane: str
     size_class: str
+    speed_est: float = 0.0
 
 
 @dataclass
@@ -57,18 +69,14 @@ class DetectionFrame:
 
 
 class YoloDetector:
-    """Detector YOLO con doble backend.
-
-    - Si `ultralytics` está instalado, se usa directamente.
-    - Si no, se usa OpenCV DNN con un modelo YOLOv8n en formato ONNX
-      (sin torch, sin dependencias pesadas), almacenado en server/models/.
-    """
+    """Detector YOLOv8 con soporte para inferencia en CPU/GPU mediante OpenCV DNN ONNX o Ultralytics."""
 
     def __init__(self, model_name: str = "yolov8n.pt") -> None:
         self._backend: str
         self._ultralytics_model: Any | None = None
         self._net: cv2.dnn.Net | None = None
         self._input_size = 640
+        self._prev_centroids: list[tuple[float, float, float]] = []  # cx, cy, ts
 
         try:
             from ultralytics import YOLO
@@ -78,10 +86,6 @@ class YoloDetector:
         except Exception:
             self._net = self._load_onnx()
             self._backend = "opencv" if self._net is not None else "none"
-
-    # ------------------------------------------------------------------
-    # Backends
-    # ------------------------------------------------------------------
 
     def _load_onnx(self) -> cv2.dnn.Net | None:
         if not ONNX_MODEL.exists():
@@ -107,17 +111,19 @@ class YoloDetector:
         pedestrians: list[Pedestrian] = []
         emergency_detected = False
 
+        current_centroids: list[tuple[float, float, float]] = []
+
         for item in result:
             name, conf, x1, y1, x2, y2 = item
-            cx = (x1 + x2) / 2
-            cy = (y1 + y2) / 2
+            cx = (x1 + x2) / 2.0
+            cy = (y1 + y2) / 2.0
             bw = x2 - x1
             bh = y2 - y1
             lane = "NS" if cx < w * 0.5 else "EW"
             size_class = "large" if max(bw, bh) > 120 else "medium" if max(bw, bh) > 60 else "small"
 
             if name == "person":
-                pedestrians.append(Pedestrian(cx / w, cy / h, conf))
+                pedestrians.append(Pedestrian(float(cx / w), float(cy / h), float(conf)))
                 continue
 
             if name not in _VEHICLE_NAMES:
@@ -126,20 +132,38 @@ class YoloDetector:
             if name == "ambulance":
                 emergency_detected = True
 
+            # Estimación de velocidad básica por desplazamiento de centroides más cercanos
+            speed_est = 25.0
+            if self._prev_centroids:
+                min_dist = float("inf")
+                for pcx, pcy, pts in self._prev_centroids:
+                    dt = max(0.01, ts - pts)
+                    dist = math.hypot(cx - pcx, cy - pcy)
+                    if dist < min_dist:
+                        min_dist = dist
+                        speed_est = float(min(80.0, max(5.0, (dist / dt) * 0.15)))
+
+            current_centroids.append((cx, cy, ts))
+
             kind = "moto" if name == "motorcycle" else name
+            approach = "N" if lane == "NS" and cy < h * 0.5 else "S" if lane == "NS" else "E" if cy > h * 0.5 else "W"
+
             vehicles.append(
                 Vehicle(
                     kind=kind,
-                    approach="N" if lane == "NS" and cy < h * 0.5 else "S" if lane == "NS" else "E" if cy > h * 0.5 else "W",
-                    x=cx / w,
-                    y=cy / h,
-                    w=bw / w,
-                    h=bh / h,
-                    confidence=conf,
+                    approach=approach,
+                    x=float(cx / w),
+                    y=float(cy / h),
+                    w=float(bw / w),
+                    h=float(bh / h),
+                    confidence=float(conf),
                     lane=lane,
                     size_class=size_class,
+                    speed_est=speed_est,
                 )
             )
+
+        self._prev_centroids = current_centroids[:20]
 
         lane_density = {"NS": 0.0, "EW": 0.0}
         for v in vehicles:
@@ -160,8 +184,54 @@ class YoloDetector:
             raw_image=None,
         )
 
+    def annotate_frame(self, frame: np.ndarray, detection: DetectionFrame) -> np.ndarray:
+        """Dibuja sobre el frame las cajas de detección, etiquetas y telemetría analítica."""
+        annotated = frame.copy()
+        h, w = annotated.shape[:2]
+
+        # 1. Overlay superior translúcido para telemetría
+        overlay = annotated.copy()
+        cv2.rectangle(overlay, (0, 0), (w, 36), (15, 18, 22), -1)
+        cv2.addWeighted(overlay, 0.75, annotated, 0.25, 0, annotated)
+
+        header_text = f"AMEGHINO AI | VEH: {len(detection.vehicles)} | PEAT: {len(detection.pedestrians)} | EJE N-S: {int(detection.lane_density.get('NS', 0))} | EJE E-O: {int(detection.lane_density.get('EW', 0))}"
+        if detection.emergency_detected:
+            header_text += " | [!] EMERGENCIA DETECTADA"
+        cv2.putText(annotated, header_text, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (230, 240, 245), 1, cv2.LINE_AA)
+
+        # 2. Detecciones vehiculares
+        for v in detection.vehicles:
+            cx = int(v.x * w)
+            cy = int(v.y * h)
+            bw = int(v.w * w)
+            bh = int(v.h * h)
+            x1 = max(0, int(cx - bw / 2))
+            y1 = max(0, int(cy - bh / 2))
+            x2 = min(w - 1, int(cx + bw / 2))
+            y2 = min(h - 1, int(cy + bh / 2))
+
+            color = CLASS_COLORS.get(v.kind, (80, 200, 100))
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+
+            # Etiqueta de la caja
+            label = f"{v.kind.upper()} {int(v.confidence * 100)}%"
+            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)[0]
+            label_y = max(y1, t_size[1] + 6)
+            cv2.rectangle(annotated, (x1, label_y - t_size[1] - 4), (x1 + t_size[0] + 6, label_y + 2), color, -1)
+            cv2.putText(annotated, label, (x1 + 3, label_y - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (10, 15, 20), 1, cv2.LINE_AA)
+
+        # 3. Peatones
+        for p in detection.pedestrians:
+            px = int(p.x * w)
+            py = int(p.y * h)
+            color = CLASS_COLORS["person"]
+            cv2.circle(annotated, (px, py), 6, color, -1)
+            cv2.circle(annotated, (px, py), 10, color, 1)
+
+        return annotated
+
     def _detect_ultralytics(self, frame: np.ndarray) -> list[tuple[str, float, float, float, float, float]]:
-        results = self._ultralytics_model(frame, verbose=False, conf=0.35)
+        results = self._ultralytics_model(frame, verbose=False, conf=0.32)
         detections: list[tuple[str, float, float, float, float, float]] = []
         for r in results:
             if r.boxes is None:
@@ -185,7 +255,6 @@ class YoloDetector:
         )
         self._net.setInput(blob)
         outputs = self._net.forward()
-        # YOLOv8n ONNX: shape (1, 84, 8400) -> (4 box + 80 class, anchors)
         preds = outputs[0].transpose((1, 0))  # (8400, 84)
         scale_x = w / self._input_size
         scale_y = h / self._input_size
@@ -198,10 +267,8 @@ class YoloDetector:
             class_scores = pred[4:]
             class_id = int(np.argmax(class_scores))
             conf = float(class_scores[class_id])
-            if conf < 0.35:
+            if conf < 0.32:
                 continue
-            # Convertir a float nativo de Python: los valores del tensor ONNX son np.float32
-            # y romperían la serialización JSON si se propagan tal cual.
             cx = float(pred[0])
             cy = float(pred[1])
             bw = float(pred[2])
@@ -217,7 +284,7 @@ class YoloDetector:
         if not boxes:
             return []
 
-        indices = cv2.dnn.NMSBoxes(boxes, scores, 0.35, 0.45)
+        indices = cv2.dnn.NMSBoxes(boxes, scores, 0.32, 0.45)
         detections: list[tuple[str, float, float, float, float, float]] = []
         for i in indices.flatten():
             x1, y1, bw, bh = boxes[i]
@@ -232,10 +299,6 @@ class YoloDetector:
     def backend(self) -> str:
         return self._backend
 
-    # ------------------------------------------------------------------
-    # Heurísticas de escena
-    # ------------------------------------------------------------------
-
     def _estimate_weather(self, frame: np.ndarray) -> str:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.Laplacian(gray, cv2.CV_64F).var()
@@ -246,3 +309,4 @@ class YoloDetector:
     def _estimate_day_night(self, frame: np.ndarray) -> bool:
         brightness = float(np.mean(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)))
         return brightness < 70
+

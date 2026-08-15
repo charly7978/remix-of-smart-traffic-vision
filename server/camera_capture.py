@@ -61,7 +61,7 @@ def resolve_stream_url(raw_url: str) -> str:
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 LOCAL_VIDEO_PATH = ASSETS_DIR / "input_video.mp4"
 VIDEO_DEGIRUM_PATH = ASSETS_DIR / "cruce_degirum.mp4"
-SNAPSHOT_RATE_SECONDS = 1.0
+SNAPSHOT_RATE_SECONDS = 0.5
 _IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
 BROWSER_HEADERS = {
@@ -70,130 +70,90 @@ BROWSER_HEADERS = {
 }
 
 # ---------------------------------------------------------------------------
-# Cámaras públicas EN VIVO de cruces urbanos con semáforos (nivel mundial).
-# Todas son ESQUINAS TIPO CRUZ reales: intersección de dos calles con
-# semáforos y tráfico vehicular visible (verificadas con YOLO sobre el pool
-# completo de TfL: presencia de semáforos + vehículos en frames sucesivos).
-# Proveedor: red oficial de TfL JamCams (Transport for London).
-# URLs directas sin API key, imagen JPEG actualizada cada pocos segundos:
-#   https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/{id}.jpg
-# Listado de cruces: API https://api.tfl.gov.uk/Place/Type/JamCam (campo imageUrl).
-# Verificación 2026-08-10: operativas (HTTP 200, JPEG, semáforos státicos en
-# dos tomas distanciadas minutos).
+# Cámaras públicas EN VIVO de cruces urbanos con semáforos de frente al tráfico.
+# Proporcionan video vehicular continuo (.mp4) y snapshots actualizados (.jpg).
 # ---------------------------------------------------------------------------
 
 INTERSECTION_CAMERAS: list[CameraSource] = [
     CameraSource(
         id="london-purley-way-croydon-road",
-        name="Londres › Purley Way y Croydon Road",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04564.jpg",
+        name="Eje A (N-S) · Av. San Martín [Cruce Simulado] / Purley Way",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04564.mp4",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-clapham-common-southside",
-        name="Londres › A3 Clapham Common Southside y Long Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04650.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-watford-way-broadway",
-        name="Londres › A1 Watford Way y The Broadway",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.09744.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-central-way-drury-way",
-        name="Londres › Great Central Way y Drury Way",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.08005.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="Cruce Principal (Eje Norte–Sur)",
+        intersection_type="Cruce de Avenida con Semáforos",
     ),
     CameraSource(
         id="london-lewisham-way-parkfield",
-        name="Londres › A20 Lewisham Way y Parkfield Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03700.jpg",
+        name="Eje B (E-O) · Av. Urquiza [Cruce Simulado] / Lewisham Way",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03700.mp4",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="Cruce Transversal (Eje Este–Oeste)",
+        intersection_type="Cruce Transversal con Semáforos",
     ),
     CameraSource(
-        id="london-eastern-ave-north-st",
-        name="Londres › A12 Eastern Avenue y A125 North St",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.02425.jpg",
+        id="london-central-way-drury-way",
+        name="Intersección Drury Way & Central Way (Flujo Pesado)",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.08005.mp4",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-mile-end-cambridge-heath",
-        name="Londres › Mile End Rd y Cambridge Heath Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.02109.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-bowes-brownlow",
-        name="Londres › Bowes Rd y Brownlow Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.01436.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-harleyford-ken-pk",
-        name="Londres › Harleyford St y Ken Pk Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04332.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
-    ),
-    CameraSource(
-        id="london-herne-hill-norwood",
-        name="Londres › Herne Hill y Norwood Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03865.jpg",
-        kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="Corredor Comercial",
+        intersection_type="Cruce con Semáforos Multicarril",
     ),
     CameraSource(
         id="london-talgarth-gliddon",
-        name="Londres › Talgarth Rd y Gliddon Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.06614.jpg",
+        name="Intersección Talgarth Road & Gliddon Road",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.06614.mp4",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="Avenida Rápida Urbana",
+        intersection_type="Cruce Semaforizado",
+    ),
+    CameraSource(
+        id="london-watford-way-broadway",
+        name="Intersección Watford Way & The Broadway",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.09744.mp4",
+        kind="public",
+        location="Acceso Urbano",
+        intersection_type="Cruce con Semáforos",
+    ),
+    CameraSource(
+        id="london-harleyford-ken-pk",
+        name="Intersección Harleyford St & Ken Pk Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04332.mp4",
+        kind="public",
+        location="Centro Urbano",
+        intersection_type="Cruce con Semáforos",
+    ),
+    CameraSource(
+        id="london-clapham-common-southside",
+        name="Intersección Clapham Common Southside & Long Rd",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04650.mp4",
+        kind="public",
+        location="Avenida Sur",
+        intersection_type="Cruce con Semáforos",
     ),
     CameraSource(
         id="london-new-cross-st-james",
-        name="Londres › A2 New Cross Rd y St James",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03663.jpg",
+        name="Intersección New Cross Rd & St James",
+        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.03663.mp4",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="Corredor de Tránsito",
+        intersection_type="Cruce con Colectivos y Autos",
     ),
     CameraSource(
-        id="london-brixton-hill-lambert",
-        name="Londres › Brixton Hill y Lambert Rd",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.04510.jpg",
+        id="caba-9-julio-corrientes",
+        name="Buenos Aires › Av. 9 de Julio y Corrientes (Obelisco)",
+        url="https://images-webcams.windy.com/88/1691337947/current/original/1691337947.jpg",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="CABA, Plaza de la República",
+        intersection_type="Gran Avenida Urbana",
     ),
     CameraSource(
-        id="london-barking-prince-regent",
-        name="Londres › Barking Rd y Prince Regent Lane",
-        url="https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00001.02314.jpg",
+        id="cordoba-bv-san-juan-velez-sarsfield",
+        name="Córdoba › Bv. San Juan y Av. Vélez Sarsfield",
+        url="https://images-webcams.windy.com/88/1664693412/current/original/1664693412.jpg",
         kind="public",
-        location="Londres, Reino Unido",
-        intersection_type="Cruce con semáforos",
+        location="Córdoba Capital (Patio Olmos)",
+        intersection_type="Cruce Céntrico con Semáforos",
     ),
 ]
 
@@ -226,7 +186,7 @@ class CameraCapture:
             ),
             CameraSource(
                 id="public-url",
-                name="URL Personalizada (RTSP / HLS / Stream en Vivo)",
+                name="URL Personalizada (RTSP / HLS / YouTube Live)",
                 url="",
                 kind="public",
                 location="Pegar URL de Transmisión Directa",
@@ -267,10 +227,18 @@ class CameraCapture:
                     self._cap = cv2.VideoCapture(int(url) if url.isdigit() else url)
 
                 if not self._cap.isOpened():
+                    if "jamcams.tfl.gov.uk" in url and url.endswith(".mp4"):
+                        jpg_url = url.replace(".mp4", ".jpg")
+                        snap = self.read_snapshot(jpg_url)
+                        if snap is not None:
+                            self._is_snapshot_mode = True
+                            self._resolved_url = jpg_url
+                            return
+
                     self._using_local_fallback = True
                     self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
             except Exception as e:
-                logger.warning(f"Error al abrir cámara {raw_url}, usando video vehicular real: {e}")
+                logger.warning(f"Error al abrir cámara {raw_url}, usando fallback vehicular: {e}")
                 self._using_local_fallback = True
                 self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
 
@@ -297,8 +265,6 @@ class CameraCapture:
                 if frame is not None:
                     self._ever_got_frame = True
                     return frame
-                # Falla transitoria de descarga: conservar el último frame real
-                # de la cámara en lugar de silenciar el problema con el video local.
                 self._last_error = "snapshot_transient_failure"
                 if self._last_frame is not None:
                     return self._last_frame
@@ -307,17 +273,15 @@ class CameraCapture:
 
             if self._cap is not None and self._cap.isOpened():
                 ret, frame = self._cap.read()
-                if not ret:
-                    # Rebobinar el video de tráfico vehicular al llegar al final
+                if not ret or frame is None:
                     self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ret, frame = cap_read = self._cap.read()
+                    ret, frame = self._cap.read()
 
                 if ret and frame is not None:
                     self._last_frame = frame
                     self._ever_got_frame = True
                     return frame
 
-            # Si la captura remota o dispositivo falla, reproducir video de tráfico vehicular real
             if not self._using_local_fallback:
                 self._using_local_fallback = True
                 self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
@@ -330,15 +294,6 @@ class CameraCapture:
 
             if self._last_frame is not None:
                 return self._last_frame
-
-            # Fallback secundario de respaldo
-            self._cap = cv2.VideoCapture(str(LOCAL_VIDEO_PATH))
-            if self._cap.isOpened():
-                ret, frame = self._cap.read()
-                if ret and frame is not None:
-                    self._last_frame = frame
-                    self._ever_got_frame = True
-                    return frame
 
             return np.zeros((480, 640, 3), dtype=np.uint8)
 
@@ -368,12 +323,6 @@ class CameraCapture:
         return path.endswith(_IMAGE_EXTENSIONS)
 
 
-# ---------------------------------------------------------------------------
-# Registro de capturas: UNA instancia de CameraCapture por cámara y eje.
-# El cruce simulado usa dos cámaras simultáneas (una por eje), cada una con su
-# propia sesión de descarga y su último frame real, como en la realidad.
-# ---------------------------------------------------------------------------
-
 _CAPTURES: dict[str, CameraCapture] = {}
 _CAPTURES_LOCK = threading.Lock()
 
@@ -385,3 +334,4 @@ def get_capture(camera_id: str) -> CameraCapture:
             cap = CameraCapture()
             _CAPTURES[camera_id] = cap
         return cap
+
