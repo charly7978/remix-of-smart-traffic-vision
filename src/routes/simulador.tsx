@@ -297,7 +297,7 @@ function SimuladorPage() {
 
   // modo real
   const [sourceMode, setSourceMode] = useState<SourceMode>("real");
-  const [cameraId, setCameraId] = useState("london-a10-carterhatch-lane");
+  const [cameraId, setCameraId] = useState("london-purley-way-croydon-road");
   const [realFrame, setRealFrame] = useState<DetectionFrame | null>(null);
   const realImageRef = useRef<HTMLImageElement | null>(null);
 
@@ -325,14 +325,6 @@ function SimuladorPage() {
     const ew = ld["EW"] ?? 0;
     if (ns + ew > 0) {
       engine.setNsShare(ns / (ns + ew));
-      const observedFlow = Math.max(500, Math.min(2200, (ns + ew) * 220));
-      const currentH = Math.floor(frame.hour ?? 12) % 24;
-      engine.setFlowAt(currentH, observedFlow);
-    }
-    if (frame.pedestrians && frame.pedestrians.length > 0) {
-      if (engine.pedestrians.length < frame.pedestrians.length) {
-        engine.spawnPedestrian(ns >= ew ? "NS" : "EW");
-      }
     }
     if (frame.emergencyDetected) {
       engine.triggerEmergency();
@@ -340,12 +332,12 @@ function SimuladorPage() {
   }, []);
 
   const handleRealError = useCallback((error: Error) => {
-    console.warn("Real vision status update:", error.message);
+    console.error("Real vision error:", error);
   }, []);
 
   useRealVision({
-    cameraId: null, // Gestionado exclusivamente por RealCameraPanel
-    enabled: false,
+    cameraId: sourceMode === "real" ? cameraId : null,
+    enabled: sourceMode === "real",
     onFrame: handleRealFrame,
     onError: handleRealError,
   });
@@ -592,21 +584,6 @@ function SimuladorPage() {
           <RealCameraPanel
             onFrame={handleRealFrame}
             onSelectCamera={(id) => setCameraId(id)}
-            onTriggerEmergency={() => engineRef.current?.triggerEmergency()}
-            onTriggerNight={() => {
-              const e = engineRef.current;
-              if (e) {
-                e.setHour(3.0);
-                e.setNsShare(0.8);
-                e.setMinutesPerSecond(1.5);
-              }
-            }}
-            onTriggerPedestrian={() => {
-              const e = engineRef.current;
-              if (e) {
-                for (let i = 0; i < 4; i++) e.spawnPedestrian(i % 2 === 0 ? "NS" : "EW");
-              }
-            }}
           />
         </div>
       )}

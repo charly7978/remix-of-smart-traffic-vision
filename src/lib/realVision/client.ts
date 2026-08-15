@@ -1,7 +1,5 @@
 const VISION_BASE = (import.meta as any).env?.VITE_VISION_BASE || "http://localhost:8787";
 
-import type { TwinPayload } from "@/lib/traffic/types";
-
 export type CameraSource = {
   id: string;
   name: string;
@@ -44,9 +42,6 @@ export type DetectionFrame = {
   cameraIds?: { axisA: string; axisB: string };
   dual?: boolean;
   decision?: DecisionPayload;
-  analyticsA?: Record<string, Record<string, unknown>>;
-  analyticsB?: Record<string, Record<string, unknown>>;
-  twin?: TwinPayload;
 };
 
 function normalizeFrame(data: any): DetectionFrame {
@@ -71,15 +66,6 @@ function normalizeFrame(data: any): DetectionFrame {
   }
   if (data.image_b || data.rawImageB) {
     frame.rawImageB = data.image_b || data.rawImageB || null;
-  }
-  if (data.analyticsA) {
-    frame.analyticsA = data.analyticsA;
-  }
-  if (data.analyticsB) {
-    frame.analyticsB = data.analyticsB;
-  }
-  if (data.twin) {
-    frame.twin = data.twin as TwinPayload;
   }
   return frame;
 }

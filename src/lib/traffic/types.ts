@@ -42,41 +42,4 @@ export type RealEngineConfig = {
   decisionMode: "auto" | "assisted";
 };
 
-export type SourceMode = "synthetic" | "real" | "twin";
-
-export type ApproachMeasurePayload = {
-  approach: string;
-  count: number;
-  queue: number;
-  queueMeters: number;
-  density: number;
-  flowEst: number;
-  speedAvg: number;
-  stoppedRatio: number;
-  pedWaiting: number;
-};
-
-export type TwinPayload = {
-  ts: number;
-  approaches: Record<string, {
-    approach: string;
-    count: number;
-    queue: number;
-    queueMeters: number;
-    flowEst: number;
-    speedAvg: number;
-  }>;
-  nsFlow: number;
-  ewFlow: number;
-  nsQueue: number;
-  ewQueue: number;
-  signal: { axis: string; phase: string; countdown: number };
-  decision: {
-    action: string;
-    seconds: number;
-    axis: string;
-    confidence: number;
-    rationale: string;
-  };
-  calibrationOk: boolean;
-};
+export type SourceMode = "synthetic" | "real";

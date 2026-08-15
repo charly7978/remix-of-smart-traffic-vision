@@ -546,8 +546,6 @@ export class TrafficEngine {
   missedCount = 0;
 
   private spawnAcc = 0;
-  private approachOverrides: Partial<Record<Approach, number>> = {};
-  private approachAcc: Record<string, number> = { N: 0, S: 0, E: 0, W: 0 };
   private feedTimer = 0;
   private histTimer = 0;
   private detectedIds = new Set<number>();
@@ -584,22 +582,6 @@ export class TrafficEngine {
 
   setNsShare(v: number) {
     this.nsShare = Math.max(0.1, Math.min(0.9, v));
-  }
-
-  setApproachFlow(approach: Approach, vehPerHour: number) {
-    this.approachOverrides[approach] = Math.max(0, Math.min(3000, vehPerHour));
-    if (vehPerHour <= 0) this.approachAcc[approach] = 0;
-  }
-
-  setOverrides(overrides: Partial<Record<Approach, number>>) {
-    for (const [k, v] of Object.entries(overrides)) {
-      if (v !== undefined) this.setApproachFlow(k as Approach, v);
-    }
-  }
-
-  clearApproachOverrides() {
-    this.approachOverrides = {};
-    this.approachAcc = { N: 0, S: 0, E: 0, W: 0 };
   }
 
   setWeather(w: Weather, silent = false) {
@@ -729,29 +711,13 @@ export class TrafficEngine {
       this.runEvents(prev, this.hour);
     }
 
-    const hasOverrides = this.approachOverrides.N !== undefined || this.approachOverrides.S !== undefined || this.approachOverrides.E !== undefined || this.approachOverrides.W !== undefined;
-    if (hasOverrides) {
-                        const approaches: Approach[] = ["N", "S", "E", "W"];
-      for (const approach of approaches) {
-        const flow = this.approachOverrides[approach];
-        if (flow === undefined || flow <= 0) continue;
-        const rate = flow / 3600;
-        let acc = (this.approachAcc[approach] ?? 0) + dt * rate;
-        while (acc >= 1) {
-          acc -= 1;
-          this.spawnVehicle(approach);
-        }
-        this.approachAcc[approach] = acc;
-      }
-    } else {
-      const rate = this.demand / 3600;
-      this.spawnAcc += dt * rate;
-      while (this.spawnAcc >= 1) {
-        this.spawnAcc -= 1;
-        const ns = Math.random() < this.nsShare;
-        const pool: Approach[] = ns ? ["N", "S"] : ["E", "W"];
-        this.spawnVehicle(pool[Math.floor(Math.random() * 2)]!);
-      }
+    const rate = this.demand / 3600;
+    this.spawnAcc += dt * rate;
+    while (this.spawnAcc >= 1) {
+      this.spawnAcc -= 1;
+      const ns = Math.random() < this.nsShare;
+      const pool: Approach[] = ns ? ["N", "S"] : ["E", "W"];
+      this.spawnVehicle(pool[Math.floor(Math.random() * 2)]!);
     }
 
     this.moveVehicles(dt);
