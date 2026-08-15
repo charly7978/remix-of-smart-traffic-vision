@@ -1,0 +1,147 @@
+[
+  {
+    "id": "cordoba-bv-san-juan-velez-sarsfield",
+    "name": "Cordoba › Bv. San Juan y Av. Velez Sarsfield (Patio Olmos)",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 110790,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cordoba-27-abril-velez-sarsfield",
+    "name": "Cordoba › 27 de Abril y Av. Velez Sarsfield",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 96898,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cordoba-av-colon-general-paz",
+    "name": "Cordoba › Av. Colon y Av. General Paz",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 76182,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cordoba-plaza-espana-yrigoyen",
+    "name": "Cordoba › Plaza Espana y Av. Hipolito Yrigoyen",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 157465,
+    "vehicles": 1,
+    "kinds": {
+      "bus": 1
+    },
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cordoba-av-olmos-maipu-norte",
+    "name": "Cordoba › Av. Emilio Olmos y Av. Maipu (N)",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 107605,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cordoba-av-olmos-maipu-este",
+    "name": "Cordoba › Av. Emilio Olmos y Av. Maipu (E)",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 150805,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cordoba-humberto-primo-general-paz",
+    "name": "Cordoba › Humberto Primo y Av. General Paz",
+    "ok": true,
+    "size": "350x240",
+    "bytes": 103481,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "caba-9-julio-corrientes",
+    "name": "Buenos Aires › Av. 9 de Julio y Av. Corrientes (Obelisco)",
+    "ok": true,
+    "size": "640x480",
+    "bytes": 81129,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "mdp-torreon-del-monje",
+    "name": "Mar del Plata › Torreon del Monje (Av. costanera)",
+    "ok": true,
+    "size": "1280x720",
+    "bytes": 85224,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "mdp-museo-mar",
+    "name": "Mar del Plata › Museo MAR (Av. costanera)",
+    "ok": true,
+    "size": "1280x720",
+    "bytes": 123248,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "mendoza-tribunales",
+    "name": "Mendoza › Tribunales (centro)",
+    "ok": true,
+    "size": "1920x1080",
+    "bytes": 195983,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "cipolletti-centro",
+    "name": "Cipolletti › Centro",
+    "ok": true,
+    "size": "1280x720",
+    "bytes": 101776,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  },
+  {
+    "id": "sde-plaza-libertad",
+    "name": "Santiago del Estero › Plaza Libertad (centro)",
+    "ok": true,
+    "size": "1280x720",
+    "bytes": 57437,
+    "vehicles": 0,
+    "kinds": {},
+    "pedestrians": 0,
+    "night": false
+  }
+]

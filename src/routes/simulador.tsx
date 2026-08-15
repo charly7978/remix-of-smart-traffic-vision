@@ -325,6 +325,14 @@ function SimuladorPage() {
     const ew = ld["EW"] ?? 0;
     if (ns + ew > 0) {
       engine.setNsShare(ns / (ns + ew));
+      const observedFlow = Math.max(500, Math.min(2200, (ns + ew) * 220));
+      const currentH = Math.floor(frame.hour ?? 12) % 24;
+      engine.setFlowAt(currentH, observedFlow);
+    }
+    if (frame.pedestrians && frame.pedestrians.length > 0) {
+      if (engine.pedestrians.length < frame.pedestrians.length) {
+        engine.spawnPedestrian(ns >= ew ? "NS" : "EW");
+      }
     }
     if (frame.emergencyDetected) {
       engine.triggerEmergency();
@@ -332,12 +340,12 @@ function SimuladorPage() {
   }, []);
 
   const handleRealError = useCallback((error: Error) => {
-    console.error("Real vision error:", error);
+    console.warn("Real vision status update:", error.message);
   }, []);
 
   useRealVision({
-    cameraId: sourceMode === "real" ? cameraId : null,
-    enabled: sourceMode === "real",
+    cameraId: null, // Gestionado exclusivamente por RealCameraPanel
+    enabled: false,
     onFrame: handleRealFrame,
     onError: handleRealError,
   });

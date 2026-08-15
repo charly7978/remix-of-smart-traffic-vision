@@ -1,0 +1,25 @@
+[33m8376640[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: cruces reales escaneados con YOLO + simulacion de cruce con 2 camaras + video continuo
+[33me4cecdf[m fix: dev:vision usa el venv del proyecto en vez del uvicorn del PATH
+[33mcd1c2b4[m feat: camaras reales de cruces con semaforos de Argentina en vivo
+[33m3c50713[m H
+[33m18437aa[m J
+[33mb8f5d02[m chore: actualizar logs de evidencia
+[33m68a8bb6[m chore: actualizar logs de evidencia
+[33md627fa5[m fix: eliminar carpeta duplicada y actualizar logs de evidencia
+[33mb2657ce[m U
+[33md19695e[m I
+[33mfdc11c0[m P
+[33m0fd1a1f[m Ñ
+[33m238db15[m H
+[33m10879ee[m G
+[33m0a6b8f2[m G
+[33mb193d91[m F
+[33m53139c6[m F
+[33m7f0d0c3[m feat: integracion definitiva de cruces vehiculares HD reales en todas las opciones de camaras
+[33m0100377[m fix: establecer sample-argentina-intersection como camara inicial predeterminada
+[33m78ef6f1[m feat: reemplazar assets de video por metraje real HD de interseccion vehicular con inferencia YOLO continua
+[33m5affba8[m feat: incorporar reproductor de video en vivo con feedback YOLO directamente en RealCameraPanel
+[33mbe44505[m Y
+[33m3c92f42[m fix: backend Python ahora devuelve claves camelCase directamente - elimina toda necesidad de normalizacion en el frontend
+[33m6a694d6[m fix: bulletproof camera frame handling - isolate onFrame errors and guard all property access
+[33m1d43d53[m fix: normalizar propiedades snake_case de Python a camelCase en client.ts
