@@ -1,95 +1,84 @@
 /**
- * Geometría y calibración fotogramétrica del cruce inteligente Ameghino.
- * Intersección de Av. San Martín y Urquiza (Caseros, Partido de Tres de Febrero).
+ * Geometría y calibración fotogramétrica de alta precisión del cruce de Caseros.
+ * Intersección de Av. San Martín y Urquiza (Partido de Tres de Febrero).
  *
- * Mapea el sistema de coordenadas del TrafficEngine (p = 0..900) directamente
- * a las calzadas reales de la imagen 4K diurna/nocturna del distrito.
+ * Mapea el sistema de coordenadas del motor de simulación (p = 0..900) directamente
+ * sobre las calzadas de asfalto, sendas peatonales y postes de vereda reales.
  */
 
 import { type Approach } from "@/lib/traffic/engine";
 
-export type ImgPoint = { u: number; v: number };
-
-export const PHOTO_CONFIG = {
-  canvasW: 800,
-  canvasH: 800,
-  bandTop: 0,
-  naturalW: 1024,
-  naturalH: 1024,
-  center: { x: 400, y: 400 },
-} as const;
-
-/** Convierte coordenadas normalizadas (0..1) a píxeles del canvas */
-export function imgPoint(u: number, v: number): { x: number; y: number } {
-  return { x: u * PHOTO_CONFIG.canvasW, y: v * PHOTO_CONFIG.canvasH };
-}
-
-/* ------------------------------------------------------------------ */
-/* Calibración de Carriles por Acceso (Trayectorias Diagonales Reales) */
-/* ------------------------------------------------------------------ */
-
 export interface LaneCalibration {
-  /** Puntos clave [p_motor, x_px, y_px] */
+  /** Puntos de control [p_motor, x_px, y_px] */
   ctrlPoints: [number, number, number][];
-  /** Orientación base en radianes */
+  /** Orientación base de avance en radianes */
   baseAngle: number;
 }
 
 /**
- * Trayectorias calibradas sobre la imagen isométrica 1:1 de Caseros.
- * p = 0: Ingreso a la pantalla
+ * Calibración píxel a píxel sobre la imagen 1:1 de Caseros (800x800).
+ * p = -60: Ingreso a la pantalla
+ * p = 180: Aproximación a la esquina
  * p = 286: Línea de detención (WORLD.stop)
- * p = 400: Centro de la intersección (WORLD.center)
+ * p = 400: Centro del cruce (WORLD.center)
  * p = 520: Egreso del cruce (WORLD.clear)
  * p = 900: Salida de la pantalla (WORLD.despawn)
  */
 export const REAL_LANES: Record<Approach, LaneCalibration> = {
-  // Acceso N: Viene del Noroeste (arriba-izquierda) hacia el Sudeste
+  // -------------------------------------------------------------
+  // ACCESO N (Av. San Martín Noroeste -> Sudeste)
+  // -------------------------------------------------------------
   N: {
-    baseAngle: Math.PI / 4, // 45°
+    baseAngle: 0.66, // ~37.8°
     ctrlPoints: [
-      [-60, 48, 48],
-      [90, 160, 160],
-      [286, 276, 276],
-      [400, 368, 368],
-      [520, 460, 460],
-      [900, 740, 740],
+      [-60, 40, 220],
+      [120, 160, 310],
+      [286, 260, 385],
+      [400, 360, 460],
+      [520, 480, 550],
+      [900, 770, 770],
     ],
   },
-  // Acceso S: Viene del Sudeste (abajo-derecha) hacia el Noroeste
+  // -------------------------------------------------------------
+  // ACCESO S (Av. San Martín Sudeste -> Noroeste)
+  // -------------------------------------------------------------
   S: {
-    baseAngle: (-3 * Math.PI) / 4, // -135°
+    baseAngle: -2.48, // ~ -142.2°
     ctrlPoints: [
-      [-60, 752, 752],
-      [90, 640, 640],
-      [286, 524, 524],
-      [400, 432, 432],
-      [520, 340, 340],
-      [900, 60, 60],
+      [-60, 760, 730],
+      [120, 640, 640],
+      [286, 540, 565],
+      [400, 440, 490],
+      [520, 320, 400],
+      [900, 30, 180],
     ],
   },
-  // Acceso W: Viene del Sudoeste (abajo-izquierda) hacia el Noreste
+  // -------------------------------------------------------------
+  // ACCESO W (Calle Urquiza Sudoeste -> Noreste)
+  // -------------------------------------------------------------
   W: {
-    baseAngle: -Math.PI / 4, // -45°
+    baseAngle: -0.67, // ~ -38.4°
     ctrlPoints: [
-      [-60, 48, 752],
-      [90, 160, 640],
-      [286, 276, 524],
-      [400, 368, 432],
-      [520, 460, 340],
-      [900, 740, 60],
+      [-60, 70, 770],
+      [120, 180, 680],
+      [286, 290, 595],
+      [400, 390, 515],
+      [520, 510, 420],
+      [900, 770, 210],
     ],
   },
-  // Acceso E: Viene del Noreste (arriba-derecha) hacia el Sudoeste
+  // -------------------------------------------------------------
+  // ACCESO E (Calle Urquiza Noreste -> Sudoeste)
+  // -------------------------------------------------------------
   E: {
-    baseAngle: (3 * Math.PI) / 4, // 135°
+    baseAngle: 2.47, // ~ 141.5°
     ctrlPoints: [
-      [-60, 752, 48],
-      [90, 640, 160],
-      [286, 524, 276],
-      [400, 432, 368],
-      [520, 340, 460],
-      [900, 60, 740],
+      [-60, 770, 250],
+      [120, 660, 340],
+      [286, 550, 430],
+      [400, 450, 510],
+      [520, 330, 605],
+      [900, 40, 830],
     ],
   },
 };
@@ -98,7 +87,7 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/** Obtiene la posición (x,y) exacta en píxeles y el ángulo de rotación para un vehículo */
+/** Obtiene la posición (x,y) exacta y el ángulo de rotación para un vehículo en la calzada */
 export function getVehicleRealTransform(
   approach: Approach,
   p: number,
@@ -132,7 +121,7 @@ export function getVehicleRealTransform(
 }
 
 /* ------------------------------------------------------------------ */
-/* Sendas Peatonales Isométricas sobre la Fotografía Real              */
+/* Sendas Peatonales Isométricas sobre el Cruce de Caseros             */
 /* ------------------------------------------------------------------ */
 
 export interface RealCrosswalk {
@@ -143,13 +132,13 @@ export interface RealCrosswalk {
 export const REAL_CROSSWALKS: Record<"NS" | "EW", [RealCrosswalk, RealCrosswalk]> = {
   // Cruces a lo largo de la Avenida San Martín
   NS: [
-    { from: { x: 230, y: 280 }, to: { x: 330, y: 180 } }, // Senda Noroeste
-    { from: { x: 470, y: 620 }, to: { x: 570, y: 520 } }, // Senda Sudeste
+    { from: { x: 190, y: 320 }, to: { x: 290, y: 400 } }, // Senda Noroeste
+    { from: { x: 510, y: 580 }, to: { x: 610, y: 500 } }, // Senda Sudeste
   ],
   // Cruces a lo largo de la Calle Urquiza
   EW: [
-    { from: { x: 230, y: 520 }, to: { x: 330, y: 620 } }, // Senda Sudoeste
-    { from: { x: 470, y: 180 }, to: { x: 570, y: 280 } }, // Senda Noreste
+    { from: { x: 230, y: 580 }, to: { x: 330, y: 500 } }, // Senda Sudoeste
+    { from: { x: 470, y: 320 }, to: { x: 570, y: 400 } }, // Senda Noreste
   ],
 };
 
@@ -177,16 +166,15 @@ export interface RealSignalAnchor {
   x: number;
   y: number;
   rot: number;
-  poleType: "overhead" | "pedestal";
 }
 
 export const REAL_SIGNAL_ANCHORS: RealSignalAnchor[] = [
-  // Semáforo Acceso Norte (Vereda Oeste mirando a San Martín)
-  { approach: "N", x: 245, y: 310, rot: Math.PI / 4, poleType: "overhead" },
-  // Semáforo Acceso Sur (Vereda Este mirando a San Martín)
-  { approach: "S", x: 555, y: 490, rot: (-3 * Math.PI) / 4, poleType: "overhead" },
-  // Semáforo Acceso Oeste (Vereda Sur mirando a Urquiza)
-  { approach: "W", x: 310, y: 555, rot: -Math.PI / 4, poleType: "overhead" },
-  // Semáforo Acceso Este (Vereda Norte mirando a Urquiza)
-  { approach: "E", x: 490, y: 245, rot: (3 * Math.PI) / 4, poleType: "overhead" },
+  // Semáforo Acceso Norte (Vereda Noroeste mirando a San Martín)
+  { approach: "N", x: 230, y: 360, rot: 0.66 },
+  // Semáforo Acceso Sur (Vereda Sudeste mirando a San Martín)
+  { approach: "S", x: 570, y: 590, rot: -2.48 },
+  // Semáforo Acceso Oeste (Vereda Sudoeste mirando a Urquiza)
+  { approach: "W", x: 270, y: 590, rot: -0.67 },
+  // Semáforo Acceso Este (Vereda Noreste mirando a Urquiza)
+  { approach: "E", x: 570, y: 360, rot: 2.47 },
 ];

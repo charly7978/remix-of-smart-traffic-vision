@@ -1,10 +1,10 @@
 /**
  * Renderizador visual de vanguardia para el simulador de tránsito inteligente Ameghino AI.
- * Ambientado en la intersección de Av. San Martín y Urquiza (Caseros, Tres de Febrero).
+ * Intersección de Av. San Martín y Urquiza (Caseros, Partido de Tres de Febrero).
  *
- * Utiliza imágenes fotorrealistas de ultra-alta definición de Caseros (Día y Noche),
- * renderizado vehicular multicapa con llantas giratorias, faros volumétricos,
- * balizas estroboscópicas SAME 3F, colectivos Línea 343/181 y capas YOLOv11 en vivo.
+ * Emplea renderizado isométrico 3D multicapa con ordenamiento de profundidad (Painter's Algorithm),
+ * sombras de contacto volumétricas, faros LED direccionales, Colectivos 343/181 con libreas oficiales,
+ * balizas SAME 3F con destellos dinámicos, peatones animados y capas YOLOv11 en tiempo real.
  */
 
 import { type Approach, type TrafficEngine, type Vehicle } from "@/lib/traffic/engine";
@@ -16,11 +16,11 @@ import {
 } from "@/lib/photo/photoGeometry";
 
 import {
-  drawDetailedPedestrian,
-  drawDetailedTrafficSignal,
-  drawDetailedVehicle,
-  drawDetailedYoloBox,
-} from "./vehicleRenderer";
+  drawIsometricPedestrian,
+  drawIsometricTrafficSignal,
+  drawIsometricVehicle,
+  drawIsometricYoloBox,
+} from "./vehicleRenderer3D";
 
 export interface DrawOptions {
   /** Capa de analítica YOLOv11: cajas de detección y confianza */
@@ -40,7 +40,7 @@ export const DEFAULT_DRAW_OPTIONS: DrawOptions = {
   labels: true,
 };
 
-const S = 800; // Lado del canvas cuadrado
+const S = 800; // Dimensión del canvas cuadrado
 
 /* ------------------------------------------------------------------ */
 /* Caché de Imágenes Fotorrealistas de Caseros                         */
@@ -66,45 +66,44 @@ function getRealBgImage(night: boolean): HTMLImageElement | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* Efectos Climáticos y de Iluminación Ambiental                       */
+/* Efectos Climáticos e Iluminación Ambiental                          */
 /* ------------------------------------------------------------------ */
 
 function drawRainEffect(ctx: CanvasRenderingContext2D, nowMs: number) {
   ctx.save();
-  ctx.strokeStyle = "rgba(200, 225, 255, 0.35)";
+  ctx.strokeStyle = "rgba(190, 220, 255, 0.32)";
   ctx.lineWidth = 1.2;
 
-  const drops = 120;
+  const drops = 140;
   for (let i = 0; i < drops; i++) {
-    const x = (i * 137 + nowMs * 0.7) % S;
-    const y = (i * 251 + nowMs * 1.6) % S;
+    const x = (i * 137 + nowMs * 0.75) % S;
+    const y = (i * 251 + nowMs * 1.8) % S;
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x - 5, y + 16);
+    ctx.lineTo(x - 5, y + 18);
     ctx.stroke();
   }
 
-  // Reflejos en el asfalto mojado
-  ctx.fillStyle = "rgba(180, 210, 255, 0.08)";
+  // Reflejo húmedo en el asfalto
+  ctx.fillStyle = "rgba(180, 210, 255, 0.06)";
   ctx.fillRect(0, 0, S, S);
   ctx.restore();
 }
 
 function drawFogEffect(ctx: CanvasRenderingContext2D, nowMs: number) {
   ctx.save();
-  const grad = ctx.createRadialGradient(S / 2, S / 2, 80, S / 2, S / 2, S * 0.7);
-  grad.addColorStop(0, "rgba(210, 225, 240, 0.22)");
+  const grad = ctx.createRadialGradient(S / 2, S / 2, 80, S / 2, S / 2, S * 0.72);
+  grad.addColorStop(0, "rgba(210, 225, 240, 0.20)");
   grad.addColorStop(0.7, "rgba(190, 210, 230, 0.45)");
   grad.addColorStop(1, "rgba(170, 190, 215, 0.65)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // Bandas de niebla flotante
   for (let i = 0; i < 4; i++) {
-    const y = 140 + i * 160 + Math.sin(nowMs / 2000 + i) * 30;
+    const y = 120 + i * 160 + Math.sin(nowMs / 2200 + i) * 28;
     const bGrad = ctx.createLinearGradient(0, y - 40, 0, y + 40);
     bGrad.addColorStop(0, "rgba(220, 235, 250, 0)");
-    bGrad.addColorStop(0.5, "rgba(220, 235, 250, 0.18)");
+    bGrad.addColorStop(0.5, "rgba(220, 235, 250, 0.16)");
     bGrad.addColorStop(1, "rgba(220, 235, 250, 0)");
     ctx.fillStyle = bGrad;
     ctx.fillRect(0, y - 40, S, 80);
@@ -113,39 +112,39 @@ function drawFogEffect(ctx: CanvasRenderingContext2D, nowMs: number) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Capa de Información y Rótulos de Calle                              */
+/* Rótulos Urbanos de Calles                                           */
 /* ------------------------------------------------------------------ */
 
 function drawStreetLabels(ctx: CanvasRenderingContext2D) {
   ctx.save();
-  ctx.font = "bold 10px 'JetBrains Mono', monospace";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.font = "bold 9.5px 'JetBrains Mono', monospace";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
   ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
   ctx.shadowBlur = 4;
 
-  // Cartel Av. San Martín (Eje Noroeste-Sudeste)
+  // Av. San Martín (Noroeste a Sudeste)
   ctx.save();
-  ctx.translate(140, 100);
-  ctx.rotate(Math.PI / 4);
+  ctx.translate(110, 250);
+  ctx.rotate(0.66);
   ctx.fillText("AV. SAN MARTÍN ➔", 0, 0);
   ctx.restore();
 
   ctx.save();
-  ctx.translate(660, 620);
-  ctx.rotate(Math.PI / 4);
+  ctx.translate(680, 680);
+  ctx.rotate(0.66);
   ctx.fillText("➔ AV. SAN MARTÍN", 0, 0);
   ctx.restore();
 
-  // Cartel Calle Urquiza (Eje Sudoeste-Noreste)
+  // Calle Urquiza (Sudoeste a Noreste)
   ctx.save();
-  ctx.translate(120, 680);
-  ctx.rotate(-Math.PI / 4);
+  ctx.translate(140, 690);
+  ctx.rotate(-0.67);
   ctx.fillText("CALLE URQUIZA ➔", 0, 0);
   ctx.restore();
 
   ctx.save();
-  ctx.translate(640, 160);
-  ctx.rotate(-Math.PI / 4);
+  ctx.translate(670, 270);
+  ctx.rotate(-0.67);
   ctx.fillText("➔ CALLE URQUIZA", 0, 0);
   ctx.restore();
 
@@ -153,7 +152,7 @@ function drawStreetLabels(ctx: CanvasRenderingContext2D) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Capa de Conos de Visión de Cámaras Edge                            */
+/* Conos de Visión de Cámaras Edge Jetson                             */
 /* ------------------------------------------------------------------ */
 
 function drawCameraCones(ctx: CanvasRenderingContext2D, engine: TrafficEngine, nowMs: number) {
@@ -164,18 +163,18 @@ function drawCameraCones(ctx: CanvasRenderingContext2D, engine: TrafficEngine, n
 
   ctx.save();
   for (const anchor of REAL_SIGNAL_ANCHORS) {
-    const grad = ctx.createRadialGradient(anchor.x, anchor.y, 10, anchor.x, anchor.y, 180);
+    const grad = ctx.createRadialGradient(anchor.x, anchor.y, 8, anchor.x, anchor.y, 140);
     grad.addColorStop(0, `rgba(16, 185, 129, ${pulse * vis * 1.5})`);
     grad.addColorStop(1, "rgba(16, 185, 129, 0)");
 
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.moveTo(anchor.x, anchor.y);
-    ctx.arc(anchor.x, anchor.y, 180, anchor.rot - 0.45, anchor.rot + 0.45);
+    ctx.arc(anchor.x, anchor.y, 140, anchor.rot - 0.42, anchor.rot + 0.42);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = `rgba(16, 185, 129, ${0.25 * vis})`;
+    ctx.strokeStyle = `rgba(16, 185, 129, ${0.22 * vis})`;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.stroke();
@@ -185,7 +184,7 @@ function drawCameraCones(ctx: CanvasRenderingContext2D, engine: TrafficEngine, n
 }
 
 /* ------------------------------------------------------------------ */
-/* Banner de Decisión en Vivo de la IA                                 */
+/* Banner Inferior de Razonamiento del Agente de IA                   */
 /* ------------------------------------------------------------------ */
 
 function drawDecisionBanner(ctx: CanvasRenderingContext2D, engine: TrafficEngine) {
@@ -194,17 +193,16 @@ function drawDecisionBanner(ctx: CanvasRenderingContext2D, engine: TrafficEngine
   const isEmergency = engine.emergency;
 
   ctx.save();
-  const bannerY = S - 72;
-  const bannerH = 54;
+  const bannerY = S - 68;
+  const bannerH = 50;
 
-  // Fondo del banner translúcido con borde tecnológico
   ctx.fillStyle = isFailSafe
-    ? "rgba(153, 27, 27, 0.88)"
+    ? "rgba(153, 27, 27, 0.90)"
     : isEmergency
-      ? "rgba(185, 28, 28, 0.90)"
-      : "rgba(15, 23, 42, 0.85)";
-  ctx.strokeStyle = isFailSafe ? "#ef4444" : isEmergency ? "#f87171" : "rgba(16, 185, 129, 0.6)";
-  ctx.lineWidth = 1.5;
+      ? "rgba(185, 28, 28, 0.92)"
+      : "rgba(15, 23, 42, 0.88)";
+  ctx.strokeStyle = isFailSafe ? "#ef4444" : isEmergency ? "#f87171" : "rgba(16, 185, 129, 0.65)";
+  ctx.lineWidth = 1.4;
 
   ctx.beginPath();
   ctx.roundRect(20, bannerY, S - 40, bannerH, 8);
@@ -215,27 +213,27 @@ function drawDecisionBanner(ctx: CanvasRenderingContext2D, engine: TrafficEngine
   const iconColor = isFailSafe ? "#ef4444" : isEmergency ? "#ffffff" : "#10b981";
   ctx.fillStyle = iconColor;
   ctx.beginPath();
-  ctx.arc(36, bannerY + 18, 5, 0, Math.PI * 2);
+  ctx.arc(36, bannerY + 16, 4.5, 0, Math.PI * 2);
   ctx.fill();
 
   // Título de la decisión
-  ctx.font = "bold 11px 'JetBrains Mono', monospace";
+  ctx.font = "bold 10.5px 'JetBrains Mono', monospace";
   ctx.fillStyle = isFailSafe ? "#fca5a5" : "#10b981";
   const axisText = engine.axis === "NS" ? "AV. SAN MARTÍN (N-S)" : "CALLE URQUIZA (E-O)";
   const modeText = isFailSafe
     ? "FAIL-SAFE ACTIVO (CICLO FIJO PREGRABADO 22s)"
     : isEmergency
-      ? "CORREDOR DE EMERGENCIA SAME 3F HABILITADO"
+      ? "🚨 CORREDOR DE EMERGENCIA SAME 3F HABILITADO"
       : `CONTROLADOR ADAPTATIVO AMEGHINO · VERDE: ${axisText}`;
 
-  ctx.fillText(modeText, 48, bannerY + 22);
+  ctx.fillText(modeText, 48, bannerY + 20);
 
   // Razón de la decisión
-  const rationale = topDecision?.rationale || "Evaluando densidad de flujo en tiempo real...";
-  ctx.font = "10px 'JetBrains Mono', monospace";
+  const rationale = topDecision?.rationale || "Evaluando densidad vehicular en tiempo real...";
+  ctx.font = "9.5px 'JetBrains Mono', monospace";
   ctx.fillStyle = "rgba(241, 245, 249, 0.95)";
   const truncated = rationale.length > 95 ? `${rationale.substring(0, 95)}...` : rationale;
-  ctx.fillText(truncated, 36, bannerY + 42);
+  ctx.fillText(truncated, 36, bannerY + 38);
 
   ctx.restore();
 }
@@ -244,22 +242,22 @@ function drawDecisionBanner(ctx: CanvasRenderingContext2D, engine: TrafficEngine
 /* Telemetría HUD Superior                                            */
 /* ------------------------------------------------------------------ */
 
-function drawHudTelemetry(ctx: CanvasRenderingContext2D, engine: TrafficEngine, nowMs: number) {
+function drawHudTelemetry(ctx: CanvasRenderingContext2D, engine: TrafficEngine) {
   ctx.save();
-  ctx.font = "bold 10.5px 'JetBrains Mono', monospace";
+  ctx.font = "bold 10px 'JetBrains Mono', monospace";
 
   const isFailSafe = engine.failSafe;
   const h = Math.floor(engine.hour) % 24;
   const m = Math.floor((engine.hour % 1) * 60);
   const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 
-  // Badge Superior Izquierdo: Estado del Sistema
+  // Badge Superior Izquierdo
   const leftW = 280;
-  ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+  ctx.fillStyle = "rgba(15, 23, 42, 0.90)";
   ctx.strokeStyle = isFailSafe ? "#ef4444" : "rgba(16, 185, 129, 0.6)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(18, 18, leftW, 30, 6);
+  ctx.roundRect(18, 16, leftW, 28, 6);
   ctx.fill();
   ctx.stroke();
 
@@ -267,31 +265,36 @@ function drawHudTelemetry(ctx: CanvasRenderingContext2D, engine: TrafficEngine, 
   ctx.fillText(
     `● CASEROS 3F · ${timeStr} · ${isFailSafe ? "FAIL-SAFE" : "EDGE AI JETSON"}`,
     28,
-    37,
+    34,
   );
 
-  // Badge Superior Derecho: Métricas de Percepción
+  // Badge Superior Derecho
   const detRate = `${(engine.detectionRate * 100).toFixed(0)}%`;
   const rightText = `YOLOv11: ${detRate} Conf · Clima: ${engine.weather.toUpperCase()}`;
   const textW = ctx.measureText(rightText).width;
   const rightW = textW + 24;
 
-  ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+  ctx.fillStyle = "rgba(15, 23, 42, 0.90)";
   ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
   ctx.beginPath();
-  ctx.roundRect(S - 18 - rightW, 18, rightW, 30, 6);
+  ctx.roundRect(S - 18 - rightW, 16, rightW, 28, 6);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#e2e8f0";
-  ctx.fillText(rightText, S - 18 - rightW + 12, 37);
+  ctx.fillText(rightText, S - 18 - rightW + 12, 34);
 
   ctx.restore();
 }
 
 /* ------------------------------------------------------------------ */
-/* Función Principal de Renderizado del Escenario                     */
+/* Función Principal de Dibujado con Algoritmo del Pintor (3D Depth)  */
 /* ------------------------------------------------------------------ */
+
+interface RenderableEntity {
+  yOrder: number;
+  render: () => void;
+}
 
 export function drawScene(
   ctx: CanvasRenderingContext2D,
@@ -301,21 +304,20 @@ export function drawScene(
 ) {
   ctx.clearRect(0, 0, S, S);
 
-  // 1. Dibujar Imagen Real de Caseros de Fondo (Día o Noche)
+  // 1. Fondo Fotorrealista de Caseros (Día / Noche)
   const bgImg = getRealBgImage(engine.night);
   if (bgImg) {
     ctx.drawImage(bgImg, 0, 0, S, S);
   } else {
-    // Fondo de contingencia si la imagen aún carga
     ctx.fillStyle = engine.night ? "#0a0d14" : "#1e2430";
     ctx.fillRect(0, 0, S, S);
   }
 
-  // 2. Efectos Climáticos sobre el Entorno Real
+  // 2. Efectos Climáticos sobre el Escenario
   if (engine.weather === "rain") drawRainEffect(ctx, nowMs);
   if (engine.weather === "fog") drawFogEffect(ctx, nowMs);
 
-  // 3. Conos de Visión de las Cámaras Jetson Orin Nano
+  // 3. Conos de Visión de Sensores Jetson
   if (opts.cameras) {
     drawCameraCones(ctx, engine, nowMs);
   }
@@ -325,7 +327,6 @@ export function drawScene(
     drawStreetLabels(ctx);
   }
 
-  // 5. Dibujar Vehículos Fotorrealistas con Física y Trayectoria Real
   const renderOpts = {
     night: engine.night,
     fog: engine.weather === "fog",
@@ -333,38 +334,64 @@ export function drawScene(
     nowMs,
   };
 
+  // 5. Colección y Ordenamiento por Profundidad (Painter's Algorithm)
+  const entities: RenderableEntity[] = [];
+
+  // A. Vehículos 3D
   for (const v of engine.vehicles) {
     const transform = getVehicleRealTransform(v.approach, v.p);
-    drawDetailedVehicle(ctx, v, transform.x, transform.y, transform.angle, renderOpts);
+    const speedKmH = Math.min(48, Math.max(0, v.speed * 4.5));
 
-    // Capa de Detección YOLOv11 en Tiempo Real
-    if (opts.analysis && !engine.cameraOffline && v.p > 80 && v.p < 540) {
-      const speedKmH = v.speed * 4.2;
-      const boxW = v.kind === "bus" ? 48 : v.kind === "moto" ? 22 : 32;
-      const boxH = v.kind === "bus" ? 36 : v.kind === "moto" ? 20 : 26;
-      drawDetailedYoloBox(ctx, v, transform.x, transform.y, boxW, boxH, speedKmH);
-    }
-  }
+    entities.push({
+      yOrder: transform.y,
+      render: () => {
+        drawIsometricVehicle(ctx, v, transform.x, transform.y, transform.angle, renderOpts);
 
-  // 6. Dibujar Peatones Animados sobre las Sendas
-  for (const p of engine.pedestrians) {
-    const pos = getPedestrianRealPos(p.crossAxis, p.side, p.p);
-    drawDetailedPedestrian(ctx, p, pos.x, pos.y, { nowMs, analysis: opts.analysis });
-  }
-
-  // 7. Dibujar Semáforos Inteligentes Fotorrealistas con Óptica LED y Bloom
-  for (const anchor of REAL_SIGNAL_ANCHORS) {
-    const signalState = engine.signalFor(anchor.approach);
-    drawDetailedTrafficSignal(ctx, anchor.x, anchor.y, signalState, anchor.rot, {
-      night: engine.night,
-      fog: engine.weather === "fog",
-      isFailSafe: engine.failSafe,
+        // Capa de Detección YOLOv11 en Vivo
+        if (opts.analysis && !engine.cameraOffline && v.p > 40 && v.p < 560) {
+          drawIsometricYoloBox(ctx, v, transform.x, transform.y, speedKmH);
+        }
+      },
     });
   }
 
-  // 8. Capa de Telemetría HUD y Banner de Decisión de IA
+  // B. Peatones 3D
+  for (const p of engine.pedestrians) {
+    const pos = getPedestrianRealPos(p.crossAxis, p.side, p.p);
+    entities.push({
+      yOrder: pos.y,
+      render: () => {
+        drawIsometricPedestrian(ctx, p, pos.x, pos.y, { nowMs, analysis: opts.analysis });
+      },
+    });
+  }
+
+  // C. Semáforos 3D Anclados en Veredas
+  for (const anchor of REAL_SIGNAL_ANCHORS) {
+    const signalState = engine.signalFor(anchor.approach);
+    entities.push({
+      yOrder: anchor.y,
+      render: () => {
+        drawIsometricTrafficSignal(ctx, anchor.x, anchor.y, signalState, anchor.rot, {
+          night: engine.night,
+          fog: engine.weather === "fog",
+          isFailSafe: engine.failSafe,
+        });
+      },
+    });
+  }
+
+  // Ordenar de menor a mayor Y (de arriba hacia abajo en pantalla)
+  entities.sort((a, b) => a.yOrder - b.yOrder);
+
+  // Ejecutar renderizado ordenado por profundidad
+  for (const ent of entities) {
+    ent.render();
+  }
+
+  // 6. Capa de Telemetría HUD y Banner Inferior
   if (opts.hud) {
     drawDecisionBanner(ctx, engine);
-    drawHudTelemetry(ctx, engine, nowMs);
+    drawHudTelemetry(ctx, engine);
   }
 }
