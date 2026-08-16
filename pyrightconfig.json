@@ -1,20 +1,9 @@
 {
   "venvPath": "server",
   "venv": ".venv",
-  "extraPaths": [
-    "server",
-    "server/.venv/Lib/site-packages"
-  ],
-  "exclude": [
-    "**/__pyrefly_virtual__/**",
-    "**/__pyrefly_virtual__*",
-    "**/node_modules",
-    "**/dist"
-  ],
-  "ignore": [
-    "**/__pyrefly_virtual__/**",
-    "**/__pyrefly_virtual__*"
-  ],
+  "extraPaths": ["server", "server/.venv/Lib/site-packages"],
+  "exclude": ["**/__pyrefly_virtual__/**", "**/__pyrefly_virtual__*", "**/node_modules", "**/dist"],
+  "ignore": ["**/__pyrefly_virtual__/**", "**/__pyrefly_virtual__*"],
   "reportMissingImports": "warning",
   "typeCheckingMode": "basic"
 }

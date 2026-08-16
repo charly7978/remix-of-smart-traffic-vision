@@ -185,12 +185,14 @@ Algoritmo de Detección y Control (Python)
 Python
 
 # Importación de librerías para IA y Control de Hardware
+
 import cv2
 from ultralytics import YOLO
 import RPi.GPIO as GPIO # Para Raspberry Pi
 import time
 
 # Configuración de Pines GPIO para el Semáforo (Relés)
+
 RED_PIN = 18
 YELLOW_PIN = 23
 GREEN_PIN = 24
@@ -199,20 +201,21 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(, GPIO.OUT)
 
 # Carga del Modelo YOLOv11 entrenado para tráfico
-model = YOLO('yolo11n.pt') 
+
+model = YOLO('yolo11n.pt')
 
 def gestionar_trafico(source=0):
-    cap = cv2.VideoCapture(source)
-    
+cap = cv2.VideoCapture(source)
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret: break
-        
+
         # Inferencia de IA
         results = model(frame, classes=) # Coche, Moto, Autobús, Camión
-        
+
         vehiculos_detectados = len(results.boxes)
-        
+
         # Lógica Ameghino: Si hay más de 5 vehículos, priorizar verde
         if vehiculos_detectados > 5:
             print(f"Densidad alta: {vehiculos_detectados} vehículos. Activando Verde.")
@@ -222,10 +225,10 @@ def gestionar_trafico(source=0):
             # Ciclo normal o espera según seguridad nocturna
             print("Densidad baja. Manteniendo lógica de eficiencia.")
             # Aquí se insertaría la lógica de seguridad nocturna
-            
+
         # Mostrar resultado visual (para monitoreo)
         cv2.imshow('Ameghino AI Traffic Monitor', results.plot())
-        
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -233,9 +236,9 @@ def gestionar_trafico(source=0):
     GPIO.cleanup()
 
 # Ejecución del sistema
-if __name__ == "__main__":
-    gestionar_trafico()
 
+if **name** == "**main**":
+gestionar_trafico()
 
 .
 

@@ -18,12 +18,7 @@ export type LightPhase = "green" | "amber" | "allred";
 export type Weather = "clear" | "rain" | "fog";
 
 export type EventType =
-  | "camera_fail"
-  | "camera_restore"
-  | "weather_clear"
-  | "weather_rain"
-  | "weather_fog"
-  | "emergency";
+  "camera_fail" | "camera_restore" | "weather_clear" | "weather_rain" | "weather_fog" | "emergency";
 
 export interface ScenarioEvent {
   id: string;
@@ -354,8 +349,8 @@ const CAR_COLORS = ["#5b8def", "#94a3b8", "#e2b13c", "#7c6ff0", "#3fae8a", "#d96
 
 /** Perfil horario por defecto: aforo tipo de una avenida secundaria del Conurbano (veh/h) */
 export const DEFAULT_FLOW: number[] = [
-  180, 120, 90, 80, 110, 240, 620, 1180, 1620, 1350, 1080, 1020, 1140, 1080, 1010, 1120, 1380,
-  1720, 1880, 1520, 1080, 760, 480, 280,
+  180, 120, 90, 80, 110, 240, 620, 1180, 1620, 1350, 1080, 1020, 1140, 1080, 1010, 1120, 1380, 1720,
+  1880, 1520, 1080, 760, 480, 280,
 ];
 
 export const DEFAULT_EVENTS: ScenarioEvent[] = [
@@ -624,7 +619,10 @@ export class TrafficEngine {
     const approach = APPROACHES[Math.floor(Math.random() * APPROACHES.length)]!;
     this.emergencyApproach = approach;
     this.spawnVehicle(approach, "ambulance", true);
-    this.pushLog(`Corredor de emergencia solicitado desde el ${APPROACH_LABEL_ES[approach]}.`, "danger");
+    this.pushLog(
+      `Corredor de emergencia solicitado desde el ${APPROACH_LABEL_ES[approach]}.`,
+      "danger",
+    );
   }
 
   // ---------- lecturas derivadas ----------
@@ -648,8 +646,7 @@ export class TrafficEngine {
 
   get failSafeReason(): string | null {
     if (this.cameraOffline) return "Sin señal de video";
-    if (this.detectionRate < this.config.visibilityFloor)
-      return "Percepción degradada por clima";
+    if (this.detectionRate < this.config.visibilityFloor) return "Percepción degradada por clima";
     return null;
   }
 
@@ -823,7 +820,7 @@ export class TrafficEngine {
       kind ??
       (() => {
         const r = Math.random();
-        return r < 0.65 ? "car" : r < 0.78 ? "truck" : r < 0.90 ? "bus" : "moto";
+        return r < 0.65 ? "car" : r < 0.78 ? "truck" : r < 0.9 ? "bus" : "moto";
       })();
     const spec = {
       car: { len: 30, w: 20, max: 100 },
@@ -967,9 +964,7 @@ export class TrafficEngine {
       missed: this.vehicles.filter((v) => v.missed && !v.crossed).length,
       pedWaiting: this.pedWaitingOn(ax),
       pedWaitingOther: this.pedWaitingOn(other),
-      reducedWaiting: this.pedestrians.some(
-        (p) => p.waiting && p.reduced && p.crossAxis === other,
-      ),
+      reducedWaiting: this.pedestrians.some((p) => p.waiting && p.reduced && p.crossAxis === other),
       weather: this.weather,
       visibility: this.visibility,
       detectionRate: this.detectionRate,
@@ -1029,7 +1024,8 @@ export class TrafficEngine {
     const avgWait = this.passed > 0 ? this.totalWait / this.passed : 0;
     const fixedWait = fixedCycleDelay(this.demand);
     const ref = this.recentWait > 0 ? this.recentWait : avgWait;
-    const reduction = ref > 0 ? Math.max(0, Math.min(95, ((fixedWait - ref) / fixedWait) * 100)) : 0;
+    const reduction =
+      ref > 0 ? Math.max(0, Math.min(95, ((fixedWait - ref) / fixedWait) * 100)) : 0;
     const savedSeconds = Math.max(0, fixedWait - ref) * this.passed;
     const fuelSavedL = savedSeconds * 0.0006;
     const co2SavedKg = (savedSeconds * 2.3) / 1000;

@@ -9,7 +9,6 @@ import { EventTimeline } from "@/components/simulator/EventTimeline";
 import { FLOW_PRESETS, FlowProfileEditor } from "@/components/simulator/FlowProfileEditor";
 import { WaitChart } from "@/components/simulator/WaitChart";
 import { PitchModeModal } from "@/components/simulator/PitchModeModal";
-import { RealCameraPanel } from "@/components/simulator/RealCameraPanel";
 import {
   APPROACH_LABEL_ES,
   DEFAULT_PRIORITY,
@@ -23,23 +22,21 @@ import {
   type Snapshot,
   type Weather,
 } from "@/lib/traffic/engine";
-import type { DetectionFrame, SourceMode } from "@/lib/traffic/types";
-import { useRealVision } from "@/hooks/useRealVision";
 
 export const Route = createFileRoute("/simulador")({
   head: () => ({
     meta: [
-      { title: "Gemelo Digital de Intersección — Ameghino AI" },
+      { title: "Gemelo Digital 3D de Intersección — Ameghino AI" },
       {
         name: "description",
         content:
-          "Recorrido guiado y banco de pruebas del controlador Ameghino AI: agente de tránsito con visión artificial, protocolo nocturno, prioridad peatonal, corredor de emergencia y fail-safe verificable.",
+          "Gemelo digital ultra-sofisticado de la intersección de Caseros (Tres de Febrero). Controlador adaptativo Ameghino AI con visión artificial YOLOv11, protocolo nocturno de seguridad, prioridad peatonal y corredor de emergencia SAME 3F.",
       },
-      { property: "og:title", content: "Gemelo Digital de Intersección — Ameghino AI" },
+      { property: "og:title", content: "Gemelo Digital 3D de Intersección — Ameghino AI" },
       {
         property: "og:description",
         content:
-          "Cinco escenarios clave narrados para audiencias de gobierno, con evidencia auditable y comparación contra el modelo de Webster.",
+          "Simulador fotorrealista 3D de la esquina de Av. San Martín y Urquiza con el 100% de la lógica de Inteligencia Artificial en el borde.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -49,7 +46,7 @@ export const Route = createFileRoute("/simulador")({
 });
 
 /* ------------------------------------------------------------------ */
-/* Guion institucional                                                  */
+/* Guion institucional para Caseros (Tres de Febrero)                  */
 /* ------------------------------------------------------------------ */
 
 interface Scene {
@@ -66,16 +63,17 @@ const SCENES: Scene[] = [
   {
     id: "pico",
     kicker: "Escena 1 de 5",
-    title: "Hora pico de un día hábil",
+    title: "Hora pico en Av. San Martín y Urquiza",
     narration:
-      "A las 08:00 la avenida concentra el flujo del corredor. El agente cuenta objetos válidos sobre cada eje y asigna el verde en proporción a la cola real, en vez de repetir un plan grabado hace años. Cada decisión queda registrada con su motivo.",
-    takeaway: "El verde deja de ser una constante y pasa a ser una función de la demanda observada.",
+      "A las 08:00 la avenida San Martín concentra el flujo de colectivos (Línea 343 y 181) y vehículos particulares de Caseros. El procesador Jetson Orin Nano cuenta objetos en tiempo real y asigna el verde en función exacta de la cola observada, reduciendo la espera innecesaria.",
+    takeaway:
+      "El verde deja de ser una constante rígida y pasa a ser una función directa de la demanda real observada por IA.",
     seconds: 26,
     apply: (e) => {
       e.setWeather("clear", true);
       e.setCameraOffline(false);
       e.setHour(7.9);
-      e.setNsShare(0.62);
+      e.setNsShare(0.65);
       e.setFlowProfile(FLOW_PRESETS[0]!.profile);
       e.setMinutesPerSecond(2);
     },
@@ -83,10 +81,11 @@ const SCENES: Scene[] = [
   {
     id: "noche",
     kicker: "Escena 2 de 5",
-    title: "Madrugada: el semáforo como medida de seguridad",
+    title: "Madrugada 03:00 AM: Protocolo Nocturno de Seguridad",
     narration:
-      "A las 03:00 no hay tránsito cruzado. Un conductor detenido en rojo frente a una calle vacía es un blanco estático. El agente verifica que el cruce esté libre y libera el verde de inmediato, manteniendo siempre el ámbar y el todo-rojo de seguridad.",
-    takeaway: "Menos exposición del conductor sin resignar ni un segundo de entreverde.",
+      "Durante la noche, detenerse en rojo frente a una calle desierta es un riesgo crítico de seguridad en el Conurbano. Al detectar un vehículo aproximándose sin tránsito transversal en Urquiza, la IA libera el verde de inmediato (0s de espera), protegiendo al vecino sin omitir los tiempos de seguridad.",
+    takeaway:
+      "Cero esperas innecesarias en horarios de riesgo delictivo, manteniendo siempre el entreverde de seguridad vial.",
     seconds: 22,
     apply: (e) => {
       e.setWeather("clear", true);
@@ -99,10 +98,11 @@ const SCENES: Scene[] = [
   {
     id: "peaton",
     kicker: "Escena 3 de 5",
-    title: "Prioridad peatonal y accesibilidad",
+    title: "Prioridad Peatonal y Movilidad Reducida",
     narration:
-      "El sistema no sólo ve autos. Detecta personas esperando en la senda y distingue a quien se desplaza con movilidad reducida: en ese caso acorta el verde vehicular y extiende el tiempo de cruce. Es la tarea que hoy hace, con criterio, un agente de tránsito parado en la esquina.",
-    takeaway: "La intersección incorpora al peatón como usuario prioritario, no como interferencia.",
+      "El sistema detecta personas esperando en las sendas peatonales de Caseros y distingue a vecinos mayores o con movilidad reducida (sillas de ruedas o bastones). En ese instante acota el verde vehicular y otorga una extensión automática del tiempo de cruce seguro.",
+    takeaway:
+      "Inclusión y seguridad vial garantizada para el usuario más vulnerable de la vía pública.",
     seconds: 24,
     apply: (e) => {
       e.setWeather("clear", true);
@@ -116,10 +116,11 @@ const SCENES: Scene[] = [
   {
     id: "clima",
     kicker: "Escena 4 de 5",
-    title: "Lluvia y niebla: percepción degradada",
+    title: "Lluvia y Niebla: Percepción Degradada y Tolerancia",
     narration:
-      "Con lluvia y niebla la confianza del modelo cae y aparecen objetos no clasificados. El controlador agrega margen de frenado, sostiene la decisión con los objetos válidos y monitorea la tasa de clasificación: si baja del 55%, deja de confiar en sí mismo.",
-    takeaway: "El sistema conoce sus límites y los declara antes de fallar.",
+      "Bajo condiciones de lluvia o niebla densa sobre Caseros, la confianza del detector YOLOv11 disminuye. El controlador compensa agregando margen de frenado adicional y monitorea la tasa de clasificación para asegurar decisiones confiables.",
+    takeaway:
+      "El sistema autoevalúa continuamente su nivel de confianza y declara sus límites de operación.",
     seconds: 24,
     apply: (e) => {
       e.setCameraOffline(false);
@@ -132,17 +133,18 @@ const SCENES: Scene[] = [
   {
     id: "failsafe",
     kicker: "Escena 5 de 5",
-    title: "Falla de cámara y corredor de emergencia",
+    title: "Fail-Safe por Falla de Sensor y Corredor SAME 3F",
     narration:
-      "Se corta el enlace de video. En menos de un ciclo el equipo revierte al plan fijo pregrabado de 22 segundos, emite alerta a mantenimiento y bloquea toda decisión de la IA. Acto seguido llega una ambulancia: aun degradado, el sistema garantiza que nunca existan verdes en conflicto.",
-    takeaway: "Ninguna falla de software puede producir una maniobra insegura. Eso es auditable.",
+      "Si se interrumpe el sensor o el enlace de video, el hardware de borde pasa instantáneamente al ciclo fijo pregrabado seguro (22 s por eje) y notifica al Centro de Monitoreo (COM). Cuando arriba una ambulancia del SAME 3F, el corredor de emergencia garantiza verde continuo con enclavamiento físico anti-colisión.",
+    takeaway:
+      "Arquitectura determinista que garantiza cero posibilidad de luces verdes en conflicto.",
     seconds: 26,
     apply: (e) => {
       e.setHour(21.2);
       e.setWeather("fog");
       e.setCameraOffline(true);
       e.setMinutesPerSecond(2);
-      window.setTimeout(() => e.triggerEmergency(), 6000);
+      window.setTimeout(() => e.triggerEmergency(), 5000);
     },
   },
 ];
@@ -262,6 +264,8 @@ function Metric({ value, label, tone }: { value: string; label: string; tone?: s
 const WEATHERS: Weather[] = ["clear", "rain", "fog"];
 
 /* ------------------------------------------------------------------ */
+/* Componente Principal: Simulador Ameghino AI                         */
+/* ------------------------------------------------------------------ */
 
 function SimuladorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -282,73 +286,18 @@ function SimuladorPage() {
   const [priority, setPriority] = useState<PriorityConfig>({ ...DEFAULT_PRIORITY });
   const [isPitchOpen, setIsPitchOpen] = useState(false);
 
-  // guion
+  // Guion guiado
   const [sceneIndex, setSceneIndex] = useState(0);
   const [autoplay, setAutoplay] = useState(true);
   const [sceneProgress, setSceneProgress] = useState(0);
 
-  // escenario libre
+  // Escenario libre
   const [flow, setFlow] = useState<number[]>([...DEFAULT_FLOW]);
   const [events, setEvents] = useState<ScenarioEvent[]>([...DEFAULT_EVENTS]);
   const [nsShare, setNsShare] = useState(0.58);
   const [speed, setSpeed] = useState(3);
   const [running, setRunning] = useState(true);
-  const [startHour, setStartHour] = useState(7);
-
-  // modo real
-  const [sourceMode, setSourceMode] = useState<SourceMode>("real");
-  const [cameraId, setCameraId] = useState("london-purley-way-croydon-road");
-  const [realFrame, setRealFrame] = useState<DetectionFrame | null>(null);
-  const realImageRef = useRef<HTMLImageElement | null>(null);
-
-  useEffect(() => {
-    if (sourceMode !== "real" || !realFrame?.rawImage) return;
-    const img = new Image();
-    img.onload = () => {
-      realImageRef.current = img;
-    };
-    img.src = `data:image/jpeg;base64,${realFrame.rawImage}`;
-  }, [sourceMode, realFrame]);
-
-  const handleRealFrame = useCallback((frame: DetectionFrame) => {
-    if (!frame) return;
-    setRealFrame(frame);
-    const engine = engineRef.current;
-    if (!engine) return;
-    engine.setHour(frame.hour ?? 12);
-    const w = frame.weather ?? "clear";
-    const weather: Weather = w === "fog" ? "fog" : w === "rain" ? "rain" : "clear";
-    engine.setWeather(weather, true);
-    engine.setCameraOffline(false);
-    const ld = frame.laneDensity ?? {};
-    const ns = ld["NS"] ?? 0;
-    const ew = ld["EW"] ?? 0;
-    if (ns + ew > 0) {
-      engine.setNsShare(ns / (ns + ew));
-      const observedFlow = Math.max(500, Math.min(2200, (ns + ew) * 220));
-      const currentH = Math.floor(frame.hour ?? 12) % 24;
-      engine.setFlowAt(currentH, observedFlow);
-    }
-    if (frame.pedestrians && frame.pedestrians.length > 0) {
-      if (engine.pedestrians.length < frame.pedestrians.length) {
-        engine.spawnPedestrian(ns >= ew ? "NS" : "EW");
-      }
-    }
-    if (frame.emergencyDetected) {
-      engine.triggerEmergency();
-    }
-  }, []);
-
-  const handleRealError = useCallback((error: Error) => {
-    console.warn("Real vision status update:", error.message);
-  }, []);
-
-  useRealVision({
-    cameraId: null, // Gestionado exclusivamente por RealCameraPanel
-    enabled: false,
-    onFrame: handleRealFrame,
-    onError: handleRealError,
-  });
+  const [startHour, setStartHour] = useState(8);
 
   optsRef.current = layers;
   viewRef.current = view;
@@ -378,18 +327,25 @@ function SimuladorPage() {
     let acc = 0;
     let capAcc = 0;
     let lastDecisionId = 0;
+
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
+
       if (!pausedRef.current) engine.update(dt);
-      const realBg = sourceMode === "real" ? realImageRef.current : null;
-      if (viewRef.current === "3d") drawScene3D(ctx, engine, now, optsRef.current, realBg);
-      else drawScene(ctx, engine, now, optsRef.current, realBg);
+
+      if (viewRef.current === "3d") {
+        drawScene3D(ctx, engine, now, optsRef.current);
+      } else {
+        drawScene(ctx, engine, now, optsRef.current);
+      }
+
       acc += dt;
       if (acc > 0.2) {
         acc = 0;
         setSnap(engine.getSnapshot());
       }
+
       capAcc += dt;
       if (!pausedRef.current && capAcc > 0.4) {
         capAcc = 0;
@@ -408,7 +364,12 @@ function SimuladorPage() {
             i: framesRef.current.length,
             hour: engine.hour,
             thumb: thumb.toDataURL("image/jpeg", 0.55),
-            phase: engine.phase === "green" ? "VERDE" : engine.phase === "amber" ? "AMARILLO" : "TODO ROJO",
+            phase:
+              engine.phase === "green"
+                ? "VERDE"
+                : engine.phase === "amber"
+                  ? "AMARILLO"
+                  : "TODO ROJO",
             axis: engine.axis === "NS" ? "N–S" : "E–O",
             green: engine.greenAssigned,
             sigmaNs: engine.zoneCount("NS"),
@@ -423,19 +384,20 @@ function SimuladorPage() {
       }
       raf = requestAnimationFrame(loop);
     };
+
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
-  // aplicar escena del guion
+  // Aplicar escena del guion
   const applyScene = useCallback((i: number) => {
-    const scene = SCENES[i];
+    const s = SCENES[i];
     const e = engineRef.current;
-    if (!scene || !e) return;
+    if (!s || !e) return;
     e.setEvents([]);
     e.setClockRunning(true);
-    scene.apply(e);
+    s.apply(e);
     setSceneProgress(0);
   }, []);
 
@@ -446,10 +408,10 @@ function SimuladorPage() {
 
   useEffect(() => {
     if (mode !== "guiado" || !autoplay) return;
-    const scene = SCENES[sceneIndex]!;
+    const s = SCENES[sceneIndex]!;
     const started = performance.now();
     const id = window.setInterval(() => {
-      const p = (performance.now() - started) / (scene.seconds * 1000);
+      const p = (performance.now() - started) / (s.seconds * 1000);
       if (p >= 1) {
         setSceneIndex((k) => (k + 1) % SCENES.length);
       } else {
@@ -498,6 +460,7 @@ function SimuladorPage() {
       : snap?.phase === "amber"
         ? "bg-signal-amber"
         : "bg-signal-red";
+
   const greenProgress = snap
     ? Math.min(1, snap.greenRemaining / Math.max(1, snap.greenAssigned))
     : 0;
@@ -524,7 +487,7 @@ function SimuladorPage() {
         }}
       />
 
-      {/* Pitch Bar Top Banner */}
+      {/* Banner Superior Modo Presentación Ejecutiva */}
       <div className="mb-6 rounded-2xl border border-signal-green/40 bg-gradient-to-r from-signal-green/15 via-card to-background p-4 shadow-lg flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="relative flex h-3 w-3">
@@ -532,30 +495,35 @@ function SimuladorPage() {
             <span className="relative inline-flex h-3 w-3 rounded-full bg-signal-green" />
           </span>
           <div>
-            <span className="font-mono text-xs font-bold text-signal-green uppercase tracking-wider">MODO PRESENTACIÓN EJECUTIVA 3F</span>
-            <p className="text-xs text-muted-foreground">Proyección guiada paso a paso para la reunión institucional con autoridades del Municipio.</p>
+            <span className="font-mono text-xs font-bold text-signal-green uppercase tracking-wider">
+              PROYECTO CARLOS AMEGHINO · MUNICIPALIDAD DE TRES DE FEBRERO
+            </span>
+            <p className="text-xs text-muted-foreground">
+              Gemelo digital 3D fotorrealista de la esquina de Av. San Martín y Urquiza (Caseros).
+            </p>
           </div>
         </div>
         <button
           onClick={() => setIsPitchOpen(true)}
           className="flex items-center gap-2 rounded-xl bg-signal-green px-5 py-2.5 font-mono text-xs font-bold text-background transition-all hover:bg-signal-green/90 shadow-md cursor-pointer"
         >
-          <span>PROYECTAR PITCH 4 MINUTOS</span>
+          <span>PROYECTAR PITCH EJECUTIVO 4 MIN</span>
         </button>
       </div>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="font-mono text-xs tracking-[0.3em] text-signal-green uppercase">
-            Gemelo digital · Av. San Martín y Urquiza · Caseros
+            Gemelo Digital 3D Fotorrealista · Av. San Martín y Urquiza · Caseros
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            El semáforo como agente de tránsito
+            Semaforización Inteligente con IA en el Borde
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Una réplica ejecutable de la intersección. Cada verde que ve en pantalla fue decidido en
-            el momento a partir de lo que las cámaras observan, y viene acompañado del motivo de esa
-            decisión. Recorra el guion institucional o tome el control y ponga a prueba el sistema.
+            Réplica matemática y visual fotorrealista de la esquina. La IA (NVIDIA Jetson Orin Nano
+            + YOLOv11) percibe el flujo real de autos, colectivos (Línea 343 y 181), motos y
+            peatones, decidiendo en tiempo real con protocolo de seguridad nocturna, prioridad
+            peatonal y corredor de emergencia SAME 3F.
           </p>
         </div>
         <div className="flex shrink-0 gap-2 rounded-lg border border-border bg-card p-1.5">
@@ -570,33 +538,13 @@ function SimuladorPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {m === "guiado" ? "Recorrido guiado" : "Control manual"}
+              {m === "guiado" ? "Recorrido guiado" : "Control manual libre"}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setSourceMode((s) => (s === "synthetic" ? "real" : "synthetic"))}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              sourceMode === "real"
-                ? "bg-signal-green text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {sourceMode === "real" ? "Cámara real ON" : "Probar cámara real"}
-          </button>
         </div>
       </div>
 
-      {sourceMode === "real" && (
-        <div className="mt-4">
-          <RealCameraPanel
-            onFrame={handleRealFrame}
-            onSelectCamera={(id) => setCameraId(id)}
-          />
-        </div>
-      )}
-
-      {/* ------------------------------ guion ------------------------------ */}
+      {/* ------------------------------ Selector de Escenas Guiadas ------------------------------ */}
       {mode === "guiado" && (
         <div className="mt-6 flex flex-wrap gap-2">
           {SCENES.map((s, i) => (
@@ -634,8 +582,8 @@ function SimuladorPage() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="flex flex-col gap-6">
-          {/* -------------------------- visor -------------------------- */}
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          {/* -------------------------- Visor Canvas 3D Fotorrealista -------------------------- */}
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="relative flex size-2">
@@ -643,24 +591,22 @@ function SimuladorPage() {
                   <span className="relative inline-flex size-2 rounded-full bg-signal-green" />
                 </span>
                 <span className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
-                  Video analítico en vivo · {clock(snap?.hour ?? startHour)}
+                  SIMULADOR 3D EN TIEMPO REAL · {clock(snap?.hour ?? startHour)} ·{" "}
+                  {snap?.night ? "NOCTURNO" : "DIURNO"}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                <Toggle on={view === "3d"} onClick={() => setView(view === "3d" ? "cenital" : "3d")}>
-                  {view === "3d" ? "Vista 3D" : "Vista cenital"}
-                </Toggle>
                 <Toggle on={layers.analysis} onClick={() => toggleLayer("analysis")}>
-                  Detecciones
+                  YOLOv11 Bounding Boxes
                 </Toggle>
                 <Toggle on={layers.cameras} onClick={() => toggleLayer("cameras")}>
-                  Cámaras
+                  Conos de Visión
                 </Toggle>
                 <Toggle on={layers.hud} onClick={() => toggleLayer("hud")}>
-                  Telemetría
+                  Telemetría HUD
                 </Toggle>
                 <Toggle on={layers.labels} onClick={() => toggleLayer("labels")}>
-                  Rótulos
+                  Rótulos de Calles
                 </Toggle>
               </div>
             </div>
@@ -668,29 +614,29 @@ function SimuladorPage() {
               ref={canvasRef}
               className="block h-auto w-full"
               style={{ aspectRatio: "1 / 1" }}
-              aria-label="Vista cenital de la intersección controlada por inteligencia artificial"
+              aria-label="Simulador 3D fotorrealista de la intersección de Caseros controlada por IA"
             />
             <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border px-4 py-3 font-mono text-[10px] text-muted-foreground">
               <span className="flex items-center gap-2">
                 <span className="inline-block size-2.5 rounded-[2px] border border-signal-green" />
-                objeto clasificado
+                YOLOv11 Clasificación Inteligente
               </span>
               <span className="flex items-center gap-2">
-                <span className="inline-block size-2.5 rounded-[2px] border border-dashed border-signal-amber" />
-                no clasificado (baja visibilidad)
+                <span className="inline-block size-2.5 rounded-[2px] bg-blue-600" />
+                Colectivo Línea 343 / 181
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="inline-block size-2.5 rounded-[2px] bg-destructive animate-pulse" />
+                Ambulancia SAME 3F (Corredor Verde)
               </span>
               <span className="flex items-center gap-2">
                 <span className="inline-block size-2.5 rounded-full bg-chart-4" />
-                peatón con movilidad reducida
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="inline-block size-2.5 rounded-[2px] bg-destructive" />
-                corredor de emergencia
+                Peatón con Movilidad Reducida
               </span>
             </div>
           </div>
 
-          {/* ------------------------ narración ------------------------ */}
+          {/* ------------------------ Narración / Perfil ------------------------ */}
           {mode === "guiado" ? (
             <section className="rounded-xl border border-primary/30 bg-card p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -723,8 +669,8 @@ function SimuladorPage() {
             </section>
           ) : (
             <Panel
-              title="Perfil horario de demanda"
-              subtitle="Arrastre sobre el gráfico para editar el aforo de cada hora (vehículos/hora, ambos ejes). El escenario se aplica en vivo."
+              title="Perfil horario de demanda (Aforo de Caseros)"
+              subtitle="Edite el volumen de tránsito por hora (vehículos/hora). El motor calcula inmediatamente el retardo Webster vs el tiempo ahorrado por la IA."
             >
               <div className="mb-4 flex flex-wrap gap-2">
                 {FLOW_PRESETS.map((p) => (
@@ -751,7 +697,8 @@ function SimuladorPage() {
                   <span className="flex items-center justify-between font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
                     Reparto direccional
                     <span className="text-foreground">
-                      N–S {Math.round(nsShare * 100)}% / E–O {Math.round((1 - nsShare) * 100)}%
+                      San Martín {Math.round(nsShare * 100)}% / Urquiza{" "}
+                      {Math.round((1 - nsShare) * 100)}%
                     </span>
                   </span>
                   <input
@@ -769,7 +716,7 @@ function SimuladorPage() {
                 </label>
                 <label className="flex flex-col gap-2">
                   <span className="flex items-center justify-between font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                    Velocidad del reloj
+                    Velocidad de simulación
                     <span className="text-foreground">{speed} min / s</span>
                   </span>
                   <input
@@ -789,10 +736,10 @@ function SimuladorPage() {
             </Panel>
           )}
 
-          {/* --------------------- panel de evidencias --------------------- */}
+          {/* --------------------- Panel de Evidencias Institucionales --------------------- */}
           <Panel
-            title="Panel institucional de evidencias"
-            subtitle="Registro auditable de las degradaciones del servicio y su tratamiento. Cada activación del fail-safe queda sellada con hora simulada y motivo."
+            title="Panel de Evidencias y Auditoría"
+            subtitle="Registro auditable de decisiones, eventos climáticos y contingencias. Cada acción queda sellada con hora, evidencia y motivo exacto."
             right={
               <span
                 className={`rounded px-2 py-1 font-mono text-[10px] tracking-widest ${
@@ -801,14 +748,14 @@ function SimuladorPage() {
                     : "bg-signal-green/15 text-signal-green"
                 }`}
               >
-                {snap?.failSafe ? "FAIL-SAFE ACTIVO" : "SERVICIO NOMINAL"}
+                {snap?.failSafe ? "FAIL-SAFE ACTIVO" : "EDGE AI ACTIVA"}
               </span>
             }
           >
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
                 <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                  Bitácora de degradaciones
+                  Bitácora de Eventos
                 </p>
                 <ul className="mt-3 flex max-h-56 flex-col gap-1.5 overflow-y-auto font-mono text-[11px]">
                   {failSafeEvents.length > 0 ? (
@@ -819,9 +766,7 @@ function SimuladorPage() {
                       >
                         <span className="shrink-0 text-muted-foreground">{clock(l.hour)}</span>
                         <span
-                          className={
-                            l.tone === "danger" ? "text-destructive" : "text-signal-green"
-                          }
+                          className={l.tone === "danger" ? "text-destructive" : "text-signal-green"}
                         >
                           {l.text}
                         </span>
@@ -829,37 +774,37 @@ function SimuladorPage() {
                     ))
                   ) : (
                     <li className="text-muted-foreground">
-                      Sin degradaciones registradas en la jornada simulada.
+                      Operando en régimen nominal autónomo sin contingencias.
                     </li>
                   )}
                 </ul>
               </div>
               <div>
                 <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                  Contraste con el modelo de Webster
+                  Contraste con el Modelo de Webster (Ciclo Fijo 90s)
                 </p>
                 <table className="mt-3 w-full font-mono text-[11px]">
                   <tbody className="[&_td]:border-b [&_td]:border-border [&_td]:py-2">
                     <tr>
-                      <td className="text-muted-foreground">Demanda instantánea</td>
+                      <td className="text-muted-foreground">Demanda actual observada</td>
                       <td className="text-right text-foreground">{snap?.demand ?? 0} veh/h</td>
                     </tr>
                     <tr>
-                      <td className="text-muted-foreground">Demora teórica ciclo fijo 90 s</td>
+                      <td className="text-muted-foreground">Demora teórica ciclo fijo 90s</td>
                       <td className="text-right text-foreground">
                         {(snap?.fixedWait ?? 0).toFixed(1)} s/veh
                       </td>
                     </tr>
                     <tr>
                       <td className="text-muted-foreground">Demora medida Ameghino AI</td>
-                      <td className="text-right text-signal-green">
+                      <td className="text-right text-signal-green font-bold">
                         {(snap?.recentWait ?? 0).toFixed(1)} s/veh
                       </td>
                     </tr>
                     <tr>
-                      <td className="text-muted-foreground">Diferencial</td>
-                      <td className="text-right text-foreground">
-                        {(snap?.reduction ?? 0).toFixed(0)} %
+                      <td className="text-muted-foreground">Reducción de demora</td>
+                      <td className="text-right text-signal-green font-bold">
+                        -{(snap?.reduction ?? 0).toFixed(0)} %
                       </td>
                     </tr>
                     <tr>
@@ -868,62 +813,20 @@ function SimuladorPage() {
                     </tr>
                   </tbody>
                 </table>
-                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-                  La línea base surge del término uniforme de Webster más sobresaturación, con la
-                  misma demanda que recibe el controlador adaptativo. No se comparan escenarios
-                  distintos.
-                </p>
               </div>
             </div>
           </Panel>
 
           <Panel
-            title="Desempeño acumulado: adaptativo vs. ciclo fijo"
-            subtitle="Curva punteada: demora teórica de un semáforo de ciclo fijo de 90 s con la misma demanda. Curva plena: desempeño medido del controlador."
+            title="Desempeño Acumulado: Adaptativo vs. Ciclo Fijo"
+            subtitle="Curva punteada: demora teórica fija (Webster 90s). Curva verde: demora optimizada en tiempo real por Ameghino AI."
           >
             <WaitChart history={snap?.history ?? []} />
           </Panel>
 
           <Panel
-            title="Autonomía verificada"
-            subtitle="El sistema decide solo. Estos contadores muestran cuántas fases se resolvieron en la esquina, sin operador ni central, y con qué latencia."
-            right={
-              <span className="rounded bg-signal-green/15 px-2 py-1 font-mono text-[10px] tracking-widest text-signal-green">
-                SIN OPERADOR
-              </span>
-            }
-          >
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              <Metric
-                value={`${snap?.autonomousDecisions ?? 0}`}
-                label="Fases decididas de forma autónoma"
-                tone="text-signal-green"
-              />
-              <Metric
-                value={`${snap?.humanInterventions ?? 0}`}
-                label="Intervenciones humanas requeridas"
-              />
-              <Metric
-                value={`${snap?.decisions[0]?.latencyMs ?? 0} ms`}
-                label="Latencia de la última decisión en el borde"
-              />
-              <Metric
-                value={`${((snap?.detectionRate ?? 0) * 100).toFixed(0)}%`}
-                label="Tasa de clasificación autoevaluada"
-              />
-            </div>
-            <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
-              Cada fase se resuelve dentro del gabinete de la esquina: la cámara observa, el modelo
-              de visión clasifica, el razonador propone una intención y el validador determinista la
-              acepta o la rechaza. No hay una persona mirando pantallas ni una orden que viaje a un
-              centro de control: la decisión ocurre donde ocurre el tránsito, en decenas de
-              milisegundos. La central sólo recibe la copia auditable de lo ya decidido.
-            </p>
-          </Panel>
-
-          <Panel
-            title="Comparación contrafáctica de políticas"
-            subtitle="Sobre la misma evidencia observada, modifique los parámetros de prioridad y vea exactamente cómo cambia la decisión. Es la herramienta para acordar una política pública antes de escribirla en un pliego."
+            title="Ajuste Contrafáctico de Parámetros de IA"
+            subtitle="Modifique en vivo los pesos de prioridad peatonal, umbrales de visibilidad y sensibilidad climática para auditar cómo reacciona el algoritmo."
           >
             <CounterfactualPanel
               evidence={snap?.evidence ?? null}
@@ -937,8 +840,8 @@ function SimuladorPage() {
           </Panel>
 
           <Panel
-            title="Auditoría fotograma a fotograma"
-            subtitle="Cada cuadro guarda la imagen que vio la cámara, el estado del cruce y —cuando hubo cambio de fase— el contrato JSON completo que el agente publicó al controlador."
+            title="Auditoría Fotograma a Fotograma"
+            subtitle="Capturas instantáneas con la evidencia visual, conteo de objetos y contrato JSON NTCIP publicado por el agente de borde."
           >
             <AuditPanel
               frames={frames}
@@ -949,8 +852,8 @@ function SimuladorPage() {
 
           {mode === "libre" && (
             <Panel
-              title="Eventos programados de la jornada"
-              subtitle="Cargue incidencias sobre la línea de tiempo: pérdida de video, cambios de clima o pasos de emergencia. Haga clic en un marcador para eliminarlo."
+              title="Línea de Tiempo de Eventos de la Jornada"
+              subtitle="Cargue eventos programados: niebla matinal, hora pico, corte de sensor o emergencias del SAME 3F."
             >
               <EventTimeline
                 events={events}
@@ -962,30 +865,33 @@ function SimuladorPage() {
           )}
         </div>
 
-        {/* ----------------------- columna derecha ----------------------- */}
+        {/* ----------------------- Columna Derecha de Métricas y Control ----------------------- */}
         <div className="flex flex-col gap-4">
-          <Panel title="Indicadores de gestión">
+          <Panel title="Impacto en Tres de Febrero">
             <div className="grid grid-cols-2 gap-2.5">
               <Metric
                 value={`${(snap?.reduction ?? 0).toFixed(0)}%`}
-                label="Reducción de demora vs. ciclo fijo"
+                label="Reducción de demora"
                 tone="text-signal-green"
               />
               <Metric
                 value={`${(snap?.recentWait ?? 0).toFixed(1)} s`}
-                label="Espera media por vehículo"
+                label="Espera media actual"
               />
-              <Metric value={`${(snap?.fuelSavedL ?? 0).toFixed(1)} L`} label="Combustible evitado" />
+              <Metric
+                value={`${(snap?.fuelSavedL ?? 0).toFixed(1)} L`}
+                label="Combustible ahorrado"
+              />
               <Metric value={`${(snap?.co2SavedKg ?? 0).toFixed(2)} kg`} label="CO₂ evitado" />
             </div>
           </Panel>
 
           <Panel
-            title="Razonamiento del agente"
-            subtitle="Cada cambio de fase publica una intención estructurada con su motivo, confianza y latencia. El validador determinista la acepta o la rechaza."
+            title="Razonador de Borde (NVIDIA Jetson)"
+            subtitle="Decisiones estructuradas con motivo, confianza y verificación determinista."
             right={
               <span className="rounded bg-secondary px-2 py-1 font-mono text-[10px] tracking-widest text-muted-foreground">
-                VLM + REGLAS
+                YOLOv11 + VLM
               </span>
             }
           >
@@ -1009,8 +915,8 @@ function SimuladorPage() {
                           d.source === "failsafe"
                             ? "text-destructive"
                             : d.source === "emergency"
-                              ? "text-signal-amber"
-                              : "text-signal-green"
+                              ? "text-signal-amber font-bold"
+                              : "text-signal-green font-bold"
                         }
                       >
                         {d.action}
@@ -1022,43 +928,38 @@ function SimuladorPage() {
                     <div className="mt-2 flex gap-3 font-mono text-[10px] text-muted-foreground">
                       <span>conf. {(d.confidence * 100).toFixed(0)}%</span>
                       <span>latencia {d.latencyMs} ms</span>
-                      <span>
-                        origen{" "}
-                        {d.source === "failsafe"
-                          ? "validador"
-                          : d.source === "emergency"
-                            ? "prioridad"
-                            : "razonador"}
-                      </span>
+                      <span>origen {d.source.toUpperCase()}</span>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">Esperando el primer ciclo…</p>
+              <p className="text-sm text-muted-foreground">Inicializando motor de inferencia…</p>
             )}
           </Panel>
 
-          <Panel title="Estado del controlador">
+          <Panel title="Estado del Controlador NTCIP">
             {snap ? (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between font-mono text-sm">
-                  <span className="text-muted-foreground">EJE HABILITADO</span>
-                  <span className="text-foreground">
-                    {snap.axis === "NS" ? "NORTE–SUR" : "ESTE–OESTE"}
+                  <span className="text-muted-foreground">EJE CON VERDE</span>
+                  <span className="text-foreground font-bold">
+                    {snap.axis === "NS" ? "AV. SAN MARTÍN (N-S)" : "CALLE URQUIZA (E-O)"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between font-mono text-sm">
-                  <span className="text-muted-foreground">LUZ</span>
-                  <span className="flex items-center gap-2 text-foreground">
+                  <span className="text-muted-foreground">FASE LUMINOSA</span>
+                  <span className="flex items-center gap-2 text-foreground font-bold">
                     <span className={`inline-block size-2.5 rounded-full ${phaseColor}`} />
                     {PHASE_LABEL[snap.phase]}
                   </span>
                 </div>
                 <div>
                   <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                    <span>VERDE {snap.greenAssigned.toFixed(0)} s · RESTA</span>
-                    <span>{snap.greenRemaining.toFixed(1)} s</span>
+                    <span>VERDE {snap.greenAssigned.toFixed(0)} s · RESTANTE</span>
+                    <span className="font-bold text-foreground">
+                      {snap.greenRemaining.toFixed(1)} s
+                    </span>
                   </div>
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
                     <div
@@ -1068,64 +969,33 @@ function SimuladorPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 border-t border-border pt-3 font-mono text-[12px] text-muted-foreground">
-                  <span>σ N–S: {snap.nsZone}</span>
-                  <span>σ E–O: {snap.ewZone}</span>
-                  <span>cola N–S: {snap.nsQueue}</span>
-                  <span>cola E–O: {snap.ewQueue}</span>
-                  <span>peatones: {snap.pedWaiting + snap.pedCrossing}</span>
-                  <span>demanda: {snap.demand} v/h</span>
+                  <span>σ San Martín: {snap.nsZone}</span>
+                  <span>σ Urquiza: {snap.ewZone}</span>
+                  <span>Cola San Martín: {snap.nsQueue}</span>
+                  <span>Cola Urquiza: {snap.ewQueue}</span>
+                  <span>Peatones: {snap.pedWaiting + snap.pedCrossing}</span>
+                  <span>Demanda: {snap.demand} v/h</span>
                 </div>
                 <div className="flex flex-wrap gap-2 border-t border-border pt-3 font-mono text-[10px] tracking-widest">
                   {snap.failSafe ? (
-                    <span className="rounded bg-destructive/15 px-2 py-1 text-destructive">
+                    <span className="rounded bg-destructive/15 px-2 py-1 text-destructive font-bold">
                       FAIL-SAFE · CICLO FIJO 22 s
                     </span>
                   ) : (
-                    <span className="rounded bg-signal-green/15 px-2 py-1 text-signal-green">
+                    <span className="rounded bg-signal-green/15 px-2 py-1 text-signal-green font-bold">
                       ADAPTATIVO · IA ACTIVA
                     </span>
                   )}
                   {snap.night && (
-                    <span className="rounded bg-chart-4/15 px-2 py-1 text-chart-4">
-                      PROTOCOLO NOCTURNO
+                    <span className="rounded bg-chart-4/15 px-2 py-1 text-chart-4 font-bold">
+                      PROTOCOLO NOCTURNO (3 AM)
                     </span>
                   )}
                   {snap.emergency && (
-                    <span className="animate-pulse rounded bg-destructive/15 px-2 py-1 text-destructive">
-                      CORREDOR DE EMERGENCIA
+                    <span className="animate-pulse rounded bg-destructive/15 px-2 py-1 text-destructive font-bold">
+                      CORREDOR SAME 3F ACTIVO
                     </span>
                   )}
-                  {snap.weather !== "clear" && (
-                    <span className="rounded bg-signal-amber/15 px-2 py-1 text-signal-amber">
-                      {WEATHER_LABEL_ES[snap.weather].toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                    <span>VISIBILIDAD</span>
-                    <span className="text-foreground">
-                      {((snap.visibility ?? 1) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className={`h-full rounded-full transition-[width] duration-500 ${
-                        snap.visibility > 0.7
-                          ? "bg-signal-green"
-                          : snap.visibility > 0.45
-                            ? "bg-signal-amber"
-                            : "bg-signal-red"
-                      }`}
-                      style={{ width: `${snap.visibility * 100}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                    <span>TASA DE CLASIFICACIÓN</span>
-                    <span className="text-foreground">
-                      {(snap.detectionRate * 100).toFixed(0)}%
-                    </span>
-                  </div>
                 </div>
               </div>
             ) : (
@@ -1134,8 +1004,8 @@ function SimuladorPage() {
           </Panel>
 
           <Panel
-            title="Intervención del operador"
-            subtitle="Provoque la condición que quiera auditar. El sistema debe responder igual delante suyo que en la calle."
+            title="Panel de Acciones Rápidas"
+            subtitle="Dispare eventos interactivos para auditar en vivo la respuesta del sistema."
           >
             <div className="grid grid-cols-3 gap-2">
               {WEATHERS.map((w) => (
@@ -1149,18 +1019,36 @@ function SimuladorPage() {
                 </Chip>
               ))}
             </div>
-            <div className="mt-2 grid gap-2">
+            <div className="mt-3 grid gap-2">
               <Chip tone="danger" onClick={() => engine()?.triggerEmergency()}>
-                Despachar ambulancia
+                🚨 Despachar Ambulancia SAME 3F
               </Chip>
               <Chip
                 active={snap?.cameraOffline ?? false}
                 tone="danger"
                 onClick={() => engine()?.setCameraOffline(!snap?.cameraOffline)}
               >
-                {snap?.cameraOffline ? "Restablecer enlace de video" : "Cortar enlace de video"}
+                {snap?.cameraOffline
+                  ? "Restablecer Enlace de Video"
+                  : "⚠️ Simular Corte de Cámara (Fail-Safe)"}
               </Chip>
-              <Chip onClick={() => engine()?.spawnPedestrian()}>Agregar peatón en la senda</Chip>
+              <div className="grid grid-cols-2 gap-2">
+                <Chip onClick={() => engine()?.spawnPedestrian("NS")}>🚶 Peatón Senda</Chip>
+                <Chip
+                  onClick={() => {
+                    const e = engine();
+                    if (e) {
+                      e.spawnPedestrian("NS");
+                      // Marcar como movilidad reducida
+                      if (e.pedestrians.length > 0) {
+                        e.pedestrians[e.pedestrians.length - 1]!.reduced = true;
+                      }
+                    }
+                  }}
+                >
+                  ♿ Movilidad Reducida
+                </Chip>
+              </div>
             </div>
             {mode === "libre" && (
               <>
@@ -1172,14 +1060,14 @@ function SimuladorPage() {
                       engine()?.setClockRunning(!running);
                     }}
                   >
-                    {running ? "Reloj activo" : "Reloj pausado"}
+                    {running ? "Reloj Activo" : "Reloj Pausado"}
                   </Chip>
                   <Chip onClick={() => setResetKey((k) => k + 1)}>Reiniciar</Chip>
                 </div>
                 <label className="mt-4 flex flex-col gap-2">
                   <span className="flex items-center justify-between font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                    Saltar a la hora
-                    <span className="text-foreground">
+                    Hora del Día (Día / Noche)
+                    <span className="text-foreground font-bold">
                       {startHour.toString().padStart(2, "0")}:00
                     </span>
                   </span>
@@ -1198,67 +1086,9 @@ function SimuladorPage() {
                 </label>
               </>
             )}
-            {snap?.failSafeReason && (
-              <p className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive">
-                Degradación activa: {snap.failSafeReason.toLowerCase()}. El controlador retoma el
-                plan fijo pregrabado y alerta a mantenimiento; ninguna decisión de la IA puede
-                generar verdes en conflicto.
-              </p>
-            )}
-          </Panel>
-
-          <Panel title="Detecciones de la red neuronal">
-            {snap && snap.detections.length > 0 ? (
-              <ul className="flex max-h-44 flex-col gap-1.5 overflow-y-auto font-mono text-[11px]">
-                {snap.detections.map((d) => (
-                  <li
-                    key={d.id}
-                    className="flex items-center justify-between rounded bg-secondary/50 px-2.5 py-1.5"
-                  >
-                    <span className="text-muted-foreground">{clock(d.hour)}</span>
-                    <span className="text-foreground">
-                      {KIND_LABEL_ES[d.kind]} · {APPROACH_LABEL_ES[d.approach]}
-                    </span>
-                    <span className="text-signal-green">{(d.confidence * 100).toFixed(0)}%</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {snap?.cameraOffline
-                  ? "Sin señal de cámara. El controlador opera en ciclo fijo pregrabado."
-                  : "Esperando vehículos en la zona de detección…"}
-              </p>
-            )}
           </Panel>
         </div>
       </div>
-
-      <section className="mt-12 grid gap-4 md:grid-cols-3">
-        {[
-          {
-            n: "01",
-            title: "Percibir",
-            text: "Cámara IP 4MP con WDR y visión nocturna sobre un detector en tiempo real: autos, camiones, motos, peatones y vehículos de emergencia. Con lluvia o niebla la confianza cae y el sistema descarta objetos por debajo del 70%.",
-          },
-          {
-            n: "02",
-            title: "Razonar",
-            text: "Un modelo de visión-lenguaje en el borde interpreta la escena y emite una intención con su motivo: extender, acortar, adelantar fase o proteger un cruce peatonal. No comanda: propone, y queda registrado.",
-          },
-          {
-            n: "03",
-            title: "Actuar y proteger",
-            text: "Un validador determinista verifica tiempos mínimos, entreverde y ausencia de conflictos antes de enviar la fase por NTCIP. Si cae el video o la clasificación baja del 55%, se revierte al plan fijo y se alerta a mantenimiento.",
-          },
-        ].map((s) => (
-          <article key={s.n} className="rounded-xl border border-border bg-card p-6">
-            <p className="font-mono text-xs text-signal-green">{s.n}</p>
-            <h3 className="mt-2 text-lg font-semibold text-foreground">{s.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.text}</p>
-          </article>
-        ))}
-      </section>
     </main>
   );
 }

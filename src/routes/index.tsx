@@ -125,7 +125,11 @@ function Index() {
           onClick={() => setSelectedImg(null)}
         >
           <div className="relative max-w-5xl overflow-hidden rounded-2xl border border-border bg-card">
-            <img src={selectedImg} alt="Ampliación" className="h-auto max-h-[85vh] w-full object-contain" />
+            <img
+              src={selectedImg}
+              alt="Ampliación"
+              className="h-auto max-h-[85vh] w-full object-contain"
+            />
             <button
               onClick={() => setSelectedImg(null)}
               className="absolute top-4 right-4 rounded-full bg-background/80 px-3 py-1 text-xs font-mono font-bold text-foreground"
@@ -145,7 +149,9 @@ function Index() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-signal-green" />
             </span>
             <span className="font-semibold text-signal-green">PRESENTACIÓN MUNICIPAL 3F:</span>
-            <span className="text-muted-foreground hidden sm:inline">Exposición ejecutiva de 4 minutos preparada para autoridades de Tres de Febrero.</span>
+            <span className="text-muted-foreground hidden sm:inline">
+              Exposición ejecutiva de 4 minutos preparada para autoridades de Tres de Febrero.
+            </span>
           </div>
           <button
             onClick={() => setIsPitchOpen(true)}
@@ -167,7 +173,7 @@ function Index() {
           className="absolute inset-0 h-full w-full object-cover opacity-35"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/80 to-background" />
-        
+
         <div className="relative mx-auto flex max-w-6xl flex-col justify-end px-4 pt-24 pb-20 sm:pt-36">
           <div className="inline-flex items-center gap-2 rounded-full border border-signal-green/30 bg-signal-green/10 px-3.5 py-1 text-xs font-mono font-medium text-signal-green">
             <Landmark className="h-3.5 w-3.5" />
@@ -182,8 +188,9 @@ function Index() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            El <strong>Proyecto Carlos Ameghino</strong> convierte cada esquina de Caseros en un agente inteligente:
-            fluidez en hora pico sobre Av. San Martín, protección cero espera para el vecino de madrugada y corredor de emergencia prioritario para el SAME.
+            El <strong>Proyecto Carlos Ameghino</strong> convierte cada esquina de Caseros en un
+            agente inteligente: fluidez en hora pico sobre Av. San Martín, protección cero espera
+            para el vecino de madrugada y corredor de emergencia prioritario para el SAME.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
@@ -238,7 +245,8 @@ function Index() {
               Visualización de Alto Impacto en Caseros
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Simulación de hiperrealismo del entorno urbano de Tres de Febrero, centros de monitoreo e interacción de inteligencia artificial.
+              Simulación de hiperrealismo del entorno urbano de Tres de Febrero, centros de
+              monitoreo e interacción de inteligencia artificial.
             </p>
           </div>
           <button
@@ -270,9 +278,7 @@ function Index() {
                 <h3 className="mt-2.5 text-sm font-bold text-foreground group-hover:text-signal-green transition-colors">
                   {img.title}
                 </h3>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  {img.subtitle}
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{img.subtitle}</p>
               </div>
             </div>
           ))}
@@ -288,7 +294,7 @@ function Index() {
           <h2 className="mt-3 max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Fundamentos para las Autoridades del Municipio de Tres de Febrero
           </h2>
-          
+
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
             <article className="rounded-2xl border border-border bg-card p-7 shadow-sm">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-signal-red/10 text-signal-red mb-4">
@@ -299,7 +305,9 @@ function Index() {
               </p>
               <h3 className="mt-2 text-lg font-bold text-foreground">Ineficiencia Estática</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                La semaforización tradicional del Conurbano opera con esquemas fijos. Esto provoca congestión evitable en horas pico y esperas peligrosas de madrugada que exponen a los vecinos de Caseros a robos o abordajes.
+                La semaforización tradicional del Conurbano opera con esquemas fijos. Esto provoca
+                congestión evitable en horas pico y esperas peligrosas de madrugada que exponen a
+                los vecinos de Caseros a robos o abordajes.
               </p>
             </article>
 
@@ -310,9 +318,13 @@ function Index() {
               <p className="font-mono text-xs tracking-widest text-signal-amber uppercase font-semibold">
                 2. La Propuesta IA
               </p>
-              <h3 className="mt-2 text-lg font-bold text-foreground">Percibir · Decidir · Actuar</h3>
+              <h3 className="mt-2 text-lg font-bold text-foreground">
+                Percibir · Decidir · Actuar
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Cada esquina incorpora una unidad procesadora de borde (Jetson Orin Nano) que analiza la escena con cámaras WDR y actúa sobre el controlador NTCIP existente con validación determinista y tolerancia a fallas.
+                Cada esquina incorpora una unidad procesadora de borde (Jetson Orin Nano) que
+                analiza la escena con cámaras WDR y actúa sobre el controlador NTCIP existente con
+                validación determinista y tolerancia a fallas.
               </p>
             </article>
 
@@ -323,7 +335,9 @@ function Index() {
               <p className="font-mono text-xs tracking-widest text-signal-green uppercase font-semibold">
                 3. Beneficios Directos
               </p>
-              <h3 className="mt-2 text-lg font-bold text-foreground">Retorno Social y Financiero</h3>
+              <h3 className="mt-2 text-lg font-bold text-foreground">
+                Retorno Social y Financiero
+              </h3>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                 <li>• Verde nocturno inmediato en 0,8s sin tránsito cruzado.</li>
                 <li>• Prioridad de ola verde para ambulancias del SAME 3F.</li>
@@ -338,7 +352,10 @@ function Index() {
               Requerimiento de Prueba de Concepto (Costo Cero para el Municipio)
             </p>
             <p className="mt-2 text-sm leading-relaxed text-foreground">
-              Lo que se solicita formalmente es la autorización para un piloto en <strong>1 intersección estratégica de Caseros</strong> (ej. Av. San Martín y Av. Urquiza), acceso a alimentación eléctrica y punto en gabinete existente. Toda decisión del sistema queda auditada y registrada criptográficamente.
+              Lo que se solicita formalmente es la autorización para un piloto en{" "}
+              <strong>1 intersección estratégica de Caseros</strong> (ej. Av. San Martín y Av.
+              Urquiza), acceso a alimentación eléctrica y punto en gabinete existente. Toda decisión
+              del sistema queda auditada y registrada criptográficamente.
             </p>
           </div>
         </div>
@@ -393,7 +410,8 @@ function Index() {
             Prueba de Concepto y Gemelo Digital interactivo
           </h2>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Consulte la simulación en tiempo real del agente inteligente, explore el comportamiento en caso de falla de cámara y calcule el retorno financiero para Tres de Febrero.
+            Consulte la simulación en tiempo real del agente inteligente, explore el comportamiento
+            en caso de falla de cámara y calcule el retorno financiero para Tres de Febrero.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <button

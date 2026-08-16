@@ -224,13 +224,37 @@ const VLM_ROWS: string[][] = [
 
 const LATENCY_ROWS: string[][] = [
   ["Captura de frame", "≈ 15–30 ms", "Sensor + ISP de la cámara IP/USB"],
-  ["Inferencia del detector (YOLOv11/RT-DETR)", "≈ 10–25 ms", "En GPU embebida (Jetson Orin Nano) o acelerador NPU"],
-  ["Tracking multiobjeto (ByteTrack/BoT-SORT)", "≈ 2–8 ms", "Asociación de detecciones entre frames"],
-  ["Razonamiento VLM (Nivel 2, cuando se invoca)", "≈ 300–800 ms", "No corre en cada frame; se dispara por evento o cada 0,5–2 Hz"],
-  ["Validación determinista de reglas duras", "≈ 1–3 ms", "Máquina de estados en CPU, sin componente probabilístico"],
-  ["Comando NTCIP al controlador", "≈ 10–40 ms", "Latencia de red/serie hacia el gabinete de campo"],
+  [
+    "Inferencia del detector (YOLOv11/RT-DETR)",
+    "≈ 10–25 ms",
+    "En GPU embebida (Jetson Orin Nano) o acelerador NPU",
+  ],
+  [
+    "Tracking multiobjeto (ByteTrack/BoT-SORT)",
+    "≈ 2–8 ms",
+    "Asociación de detecciones entre frames",
+  ],
+  [
+    "Razonamiento VLM (Nivel 2, cuando se invoca)",
+    "≈ 300–800 ms",
+    "No corre en cada frame; se dispara por evento o cada 0,5–2 Hz",
+  ],
+  [
+    "Validación determinista de reglas duras",
+    "≈ 1–3 ms",
+    "Máquina de estados en CPU, sin componente probabilístico",
+  ],
+  [
+    "Comando NTCIP al controlador",
+    "≈ 10–40 ms",
+    "Latencia de red/serie hacia el gabinete de campo",
+  ],
   ["Total ciclo reflejo (sin VLM)", "≈ 40–70 ms", "Percepción → tracking → validación → comando"],
-  ["Total con intervención contextual (Nivel 2)", "≈ 350–900 ms", "No bloquea el ciclo reflejo; ajusta la próxima ventana de decisión"],
+  [
+    "Total con intervención contextual (Nivel 2)",
+    "≈ 350–900 ms",
+    "No bloquea el ciclo reflejo; ajusta la próxima ventana de decisión",
+  ],
 ];
 
 function InteligenciaPage() {
@@ -243,24 +267,23 @@ function InteligenciaPage() {
         Arquitectura de Inteligencia — Ameghino AI
       </h1>
       <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        Qué modelos, en qué capa y con qué garantías de seguridad hacen que un semáforo deje de
-        ser un temporizador ciego y se comporte como un agente de tránsito humano parado en la
-        esquina: interpretando intención, contexto y excepciones en tiempo real.
+        Qué modelos, en qué capa y con qué garantías de seguridad hacen que un semáforo deje de ser
+        un temporizador ciego y se comporte como un agente de tránsito humano parado en la esquina:
+        interpretando intención, contexto y excepciones en tiempo real.
       </p>
 
       <div className="mt-14 flex flex-col gap-0">
         <Section id="tesis" eyebrow="Tesis" title="Por qué un detector de objetos solo no alcanza">
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Un detector de objetos como YOLO responde con precisión a la pregunta &quot;¿qué hay
-            en la escena y dónde?&quot;. Pero un agente humano parado en la esquina no solo cuenta
+            Un detector de objetos como YOLO responde con precisión a la pregunta &quot;¿qué hay en
+            la escena y dónde?&quot;. Pero un agente humano parado en la esquina no solo cuenta
             vehículos: interpreta <span className="text-foreground">intención</span> (¿ese auto
             frenó porque va a doblar o porque está haciendo una entrega?),{" "}
             <span className="text-foreground">contexto</span> (¿es la hora pico, la madrugada, hay
-            un evento en la plaza?) y{" "}
-            <span className="text-foreground">excepciones</span> (una ambulancia, un peatón con
-            movilidad reducida, una calzada anegada). Ninguna de esas tres capas de juicio surge de
-            una caja delimitadora con una etiqueta de clase; requieren razonamiento sobre la
-            escena completa, lenguaje y memoria de corto plazo.
+            un evento en la plaza?) y <span className="text-foreground">excepciones</span> (una
+            ambulancia, un peatón con movilidad reducida, una calzada anegada). Ninguna de esas tres
+            capas de juicio surge de una caja delimitadora con una etiqueta de clase; requieren
+            razonamiento sobre la escena completa, lenguaje y memoria de corto plazo.
           </p>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Por eso Ameghino AI no apuesta a un único modelo monolítico, sino a una{" "}
@@ -279,26 +302,25 @@ function InteligenciaPage() {
           title="Detección y seguimiento en el borde (10–30 FPS)"
         >
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            La capa reflejo es la que nunca puede fallar ni demorarse: es la que decide en menos
-            de 40 ms si hay un objeto cruzando una senda peatonal. Para esto se usan detectores de
-            una sola pasada —<span className="text-foreground">YOLOv11 / YOLOv8</span> (Ultralytics)
-            o <span className="text-foreground">RT-DETR</span>— combinados con algoritmos de
-            seguimiento multiobjeto como{" "}
-            <span className="text-foreground">ByteTrack</span> o{" "}
-            <span className="text-foreground">BoT-SORT</span>, que asocian detecciones entre
-            frames para saber si un vehículo se está deteniendo, acelerando o ya cruzó.
+            La capa reflejo es la que nunca puede fallar ni demorarse: es la que decide en menos de
+            40 ms si hay un objeto cruzando una senda peatonal. Para esto se usan detectores de una
+            sola pasada —<span className="text-foreground">YOLOv11 / YOLOv8</span> (Ultralytics) o{" "}
+            <span className="text-foreground">RT-DETR</span>— combinados con algoritmos de
+            seguimiento multiobjeto como <span className="text-foreground">ByteTrack</span> o{" "}
+            <span className="text-foreground">BoT-SORT</span>, que asocian detecciones entre frames
+            para saber si un vehículo se está deteniendo, acelerando o ya cruzó.
           </p>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Estos modelos son livianos por diseño: una red YOLO en su variante nano o small
-            corre por debajo de los 40 ms de inferencia en aceleradores embebidos, lo que permite
-            sostener el lazo de control en tiempo real sin depender de la nube. Es viable en{" "}
+            Estos modelos son livianos por diseño: una red YOLO en su variante nano o small corre
+            por debajo de los 40 ms de inferencia en aceleradores embebidos, lo que permite sostener
+            el lazo de control en tiempo real sin depender de la nube. Es viable en{" "}
             <span className="text-foreground">NVIDIA Jetson Orin Nano</span> (con su GPU CUDA
-            integrada) e incluso en una{" "}
-            <span className="text-foreground">Raspberry Pi 5</span> asistida por un acelerador
-            externo de bajo consumo como <span className="text-foreground">Hailo-8L</span> o el{" "}
-            <span className="text-foreground">Coral Edge TPU</span>, que descargan la convolución
-            de la CPU y sostienen tasas de cuadro utilizables para tránsito urbano (no para
-            F1, pero sí de sobra para un cruce de calles).
+            integrada) e incluso en una <span className="text-foreground">Raspberry Pi 5</span>{" "}
+            asistida por un acelerador externo de bajo consumo como{" "}
+            <span className="text-foreground">Hailo-8L</span> o el{" "}
+            <span className="text-foreground">Coral Edge TPU</span>, que descargan la convolución de
+            la CPU y sostienen tasas de cuadro utilizables para tránsito urbano (no para F1, pero sí
+            de sobra para un cruce de calles).
           </p>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Esta capa nunca razona; solo percibe y cuenta. Es el equivalente al reflejo rotuliano
@@ -315,16 +337,16 @@ function InteligenciaPage() {
             Acá aparece la diferencia central con un semáforo adaptativo tradicional. Un modelo de
             visión-lenguaje (VLM) no clasifica: describe, cuenta con contexto, lee texto en la
             escena y responde preguntas sobre lo que ve. Es la capa que le permite al sistema
-            distinguir &quot;una fila de autos&quot; de &quot;un camión de reparto detenido&quot;,
-            o reconocer una silla de ruedas donde el detector solo vio &quot;persona&quot;.
+            distinguir &quot;una fila de autos&quot; de &quot;un camión de reparto detenido&quot;, o
+            reconocer una silla de ruedas donde el detector solo vio &quot;persona&quot;.
           </p>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             No hace falta la nube para esto: existe hoy una familia madura de VLM abiertos,
-            cuantizables y ejecutables en hardware embebido. La tabla siguiente compara las
-            opciones evaluadas, con cifras presentadas como{" "}
-            <span className="text-foreground">estimaciones de referencia</span> (órdenes de
-            magnitud a partir de arquitectura y tamaño de parámetros, no benchmarks oficiales
-            certificados sobre Jetson Orin Nano):
+            cuantizables y ejecutables en hardware embebido. La tabla siguiente compara las opciones
+            evaluadas, con cifras presentadas como{" "}
+            <span className="text-foreground">estimaciones de referencia</span> (órdenes de magnitud
+            a partir de arquitectura y tamaño de parámetros, no benchmarks oficiales certificados
+            sobre Jetson Orin Nano):
           </p>
           <div className="mt-4">
             <DataTable
@@ -345,15 +367,14 @@ function InteligenciaPage() {
             propio Nivel 2:{" "}
             <span className="text-foreground">Qwen2.5-VL 3B cuantizado (INT4/AWQ)</span> como
             cerebro contextual principal —buen equilibrio entre capacidad de razonamiento, OCR de
-            patentes y latencia sub-segundo— con{" "}
-            <span className="text-foreground">SmolVLM2</span> o{" "}
+            patentes y latencia sub-segundo— con <span className="text-foreground">SmolVLM2</span> o{" "}
             <span className="text-foreground">Moondream 2</span> como fallback ultraliviano para
-            consultas simples o para sostener el servicio si el hardware está bajo estrés térmico
-            o de cómputo. Ambos se sirven localmente con motores de inferencia optimizados como{" "}
+            consultas simples o para sostener el servicio si el hardware está bajo estrés térmico o
+            de cómputo. Ambos se sirven localmente con motores de inferencia optimizados como{" "}
             <span className="text-foreground">llama.cpp</span>,{" "}
             <span className="text-foreground">Ollama</span> o{" "}
-            <span className="text-foreground">TensorRT-LLM</span> (este último cuando el objetivo
-            es exprimir al máximo la GPU de la Jetson).
+            <span className="text-foreground">TensorRT-LLM</span> (este último cuando el objetivo es
+            exprimir al máximo la GPU de la Jetson).
           </p>
         </Section>
 
@@ -363,8 +384,8 @@ function InteligenciaPage() {
           title="Modelos de razonamiento grandes, fuera del lazo crítico"
         >
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            El tercer nivel opera en la escala de segundos a minutos, con acceso a conectividad y
-            a modelos de frontera con visión: la familia{" "}
+            El tercer nivel opera en la escala de segundos a minutos, con acceso a conectividad y a
+            modelos de frontera con visión: la familia{" "}
             <span className="text-foreground">Google Gemini</span> (Flash/Pro con visión),{" "}
             <span className="text-foreground">OpenAI GPT-5 / GPT-5 mini</span> con visión,{" "}
             <span className="text-foreground">Anthropic Claude</span> con visión, o alternativas
@@ -444,10 +465,10 @@ function InteligenciaPage() {
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Ningún modelo probabilístico comanda el semáforo de forma directa. El VLM del Nivel 2
             emite una <span className="text-foreground">intención estructurada</span> en JSON, con
-            acción sugerida, eje afectado, duración propuesta, motivo en lenguaje natural y un
-            grado de confianza. Esa intención pasa siempre por un{" "}
-            <span className="text-foreground">validador determinista de reglas duras</span>,
-            escrito como una máquina de estados clásica, que aplica sin excepción: tiempos mínimos
+            acción sugerida, eje afectado, duración propuesta, motivo en lenguaje natural y un grado
+            de confianza. Esa intención pasa siempre por un{" "}
+            <span className="text-foreground">validador determinista de reglas duras</span>, escrito
+            como una máquina de estados clásica, que aplica sin excepción: tiempos mínimos
             peatonales, tiempo de entreverde, ámbar fijo de 3 segundos, todo-rojo de seguridad,
             prohibición absoluta de verdes en conflicto, límites T_min/T_max por fase e histéresis
             para evitar oscilaciones. El validador puede rechazar, recortar o directamente ignorar
@@ -472,13 +493,17 @@ function InteligenciaPage() {
             deliberadamente conservador: si la percepción deja de ser confiable —cámara tapada,
             modelo caído, latencia fuera de rango, confianza sistemáticamente baja— el controlador
             abandona el modo adaptativo y retoma automáticamente un{" "}
-            <span className="text-signal-amber">ciclo fijo pregrabado</span>, homologado y
-            validado en banco, hasta que se restablezca la percepción confiable o intervenga
-            personal de mantenimiento.
+            <span className="text-signal-amber">ciclo fijo pregrabado</span>, homologado y validado
+            en banco, hasta que se restablezca la percepción confiable o intervenga personal de
+            mantenimiento.
           </p>
         </Section>
 
-        <Section id="latencia" eyebrow="Presupuesto de tiempo" title="Latencia extremo a extremo (orden de magnitud)">
+        <Section
+          id="latencia"
+          eyebrow="Presupuesto de tiempo"
+          title="Latencia extremo a extremo (orden de magnitud)"
+        >
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Los valores siguientes son estimaciones de referencia por etapa, no mediciones
             certificadas de un banco de pruebas específico; su función es mostrar por qué el lazo
@@ -503,11 +528,11 @@ function InteligenciaPage() {
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 Con una Raspberry Pi 5, una cámara USB o IP económica, YOLOv8/v11 en su variante
                 nano y Ollama sirviendo SmolVLM2 o Moondream 2, es posible armar un prototipo
-                funcional de mesa: detecta vehículos y peatones, y responde preguntas simples
-                sobre la escena a un ritmo de una consulta cada pocos segundos. Es honesto decir
-                que a esa escala el razonamiento es lento, la tasa de cuadros del VLM es baja y no
-                hay margen para operar como lazo de seguridad real; sirve para validar el concepto
-                y demostrar la arquitectura, no para desplegar en vía pública.
+                funcional de mesa: detecta vehículos y peatones, y responde preguntas simples sobre
+                la escena a un ritmo de una consulta cada pocos segundos. Es honesto decir que a esa
+                escala el razonamiento es lento, la tasa de cuadros del VLM es baja y no hay margen
+                para operar como lazo de seguridad real; sirve para validar el concepto y demostrar
+                la arquitectura, no para desplegar en vía pública.
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6">
@@ -518,8 +543,8 @@ function InteligenciaPage() {
                 La Jetson Orin Nano aporta una GPU CUDA con soporte nativo de TensorRT, lo que
                 multiplica la velocidad de inferencia tanto del detector como del VLM cuantizado,
                 habilita correr Qwen2.5-VL 3B con latencia sub-segundo y sostiene el detector muy
-                por debajo del umbral de 40 ms. Es el salto que permite pasar de una demostración
-                de escritorio a un piloto en una intersección real, con margen térmico y de cómputo
+                por debajo del umbral de 40 ms. Es el salto que permite pasar de una demostración de
+                escritorio a un piloto en una intersección real, con margen térmico y de cómputo
                 para correr ambos niveles de forma simultánea y estable.
               </p>
             </article>
@@ -529,8 +554,8 @@ function InteligenciaPage() {
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 La homologación ante autoridad de aplicación, la integración certificada con
-                controladores NTCIP, la redundancia de hardware, el monitoreo centralizado y la
-                capa de auditoría del Nivel 3 con modelos de nube quedan reservados a la fase de
+                controladores NTCIP, la redundancia de hardware, el monitoreo centralizado y la capa
+                de auditoría del Nivel 3 con modelos de nube quedan reservados a la fase de
                 despliegue municipal, donde el costo y la responsabilidad legal exigen procesos de
                 certificación que un prototipo casero, por definición, no puede ni debe eludir.
               </p>

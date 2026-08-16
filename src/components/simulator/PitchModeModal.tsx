@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { 
-  Play, 
-  Pause, 
-  ChevronRight, 
-  ChevronLeft, 
-  X, 
-  Sparkles, 
-  Radio, 
-  CheckCircle2
+import {
+  Play,
+  Pause,
+  ChevronRight,
+  ChevronLeft,
+  X,
+  Sparkles,
+  Radio,
+  CheckCircle2,
 } from "lucide-react";
 
 interface PitchSlide {
@@ -28,97 +28,112 @@ const PITCH_SLIDES: PitchSlide[] = [
     badge: "3F MOVILIDAD INTELIGENTE",
     title: "Proyecto Carlos Ameghino — Caseros",
     subtitle: "Transformación Digital de la Red Semafórica de Tres de Febrero",
-    narrative: "Un sistema de visión artificial que convierte la red estática de semáforos en agentes inteligentes en el borde. Diseñado específicamente para responder a los desafíos de seguridad y congestión del Conurbano Bonaerense.",
+    narrative:
+      "Un sistema de visión artificial que convierte la red estática de semáforos en agentes inteligentes en el borde. Diseñado específicamente para responder a los desafíos de seguridad y congestión del Conurbano Bonaerense.",
     highlightMetric: { value: "120", label: "Intersecciones objetivo en Tres de Febrero" },
     bullets: [
       "Visión artificial en el borde con placas industriales de bajo consumo",
       "Prioridad cero espera para conductores de madrugada (Seguridad Nocturna)",
       "Corredor dinámico de emergencia para ambulancias del SAME",
-      "Reducción del 85% en costos comparado con multinacionales corporativas"
+      "Reducción del 85% en costos comparado con multinacionales corporativas",
     ],
     actionLabel: "Iniciar Presentación de 4 Minutos",
-    sceneTriggerId: "pico"
+    sceneTriggerId: "pico",
   },
   {
     id: "problema",
     badge: "DIAGNOSTICO ZONAL",
     title: "El Desafío de los Semáforos Fijos en Caseros",
     subtitle: "Pérdida de Tiempo, Emisiones y Exposición en la Vía Pública",
-    narrative: "Las esquinas clave como Av. San Martín y Av. Urquiza operan con temporizadores rígidos fijados hace años. Esto genera embotellamientos innecesarios a las 8 AM y detenciones peligrosas a las 3 AM.",
-    highlightMetric: { value: "48 min", label: "Perdidos por día por vecino en semáforos en rojo vacíos" },
+    narrative:
+      "Las esquinas clave como Av. San Martín y Av. Urquiza operan con temporizadores rígidos fijados hace años. Esto genera embotellamientos innecesarios a las 8 AM y detenciones peligrosas a las 3 AM.",
+    highlightMetric: {
+      value: "48 min",
+      label: "Perdidos por día por vecino en semáforos en rojo vacíos",
+    },
     bullets: [
       "Esperas fantasma: semáforo en rojo sin tránsito en la otra arteria",
       "Vulnerabilidad nocturna: detenerse a la madrugada aumenta el riesgo de delito",
       "Toneladas de CO₂ generadas por autos acelerando desde ralentí en rojo",
-      "Sistemas tradicionales importados cuestan hasta USD 20.000 por esquina"
+      "Sistemas tradicionales importados cuestan hasta USD 20.000 por esquina",
     ],
     actionLabel: "Ver Solución Adaptativa 3D",
-    sceneTriggerId: "pico"
+    sceneTriggerId: "pico",
   },
   {
     id: "solucion_3d",
     badge: "TECNOLOGIA EDGE IA",
     title: "Gemelo Digital & Redes Neuronales YOLOv11",
     subtitle: "Percibir, Analizar y Decidir en <200ms en el Gabinete de Esquina",
-    narrative: "Cada semáforo cuenta con una cámara WDR de 4MP y procesador Jetson Orin Nano. La IA detecta autos, colectivos (líneas 343, 181), motos y peatones, calculando el flujo real y otorgando el verde según la demanda.",
+    narrative:
+      "Cada semáforo cuenta con una cámara WDR de 4MP y procesador Jetson Orin Nano. La IA detecta autos, colectivos (líneas 343, 181), motos y peatones, calculando el flujo real y otorgando el verde según la demanda.",
     highlightMetric: { value: "-21%", label: "Reducción directa de demoras en hora pico" },
     bullets: [
       "Modelo YOLOv11 optimizado para el parque automotor argentino",
       "Sin dependencia de internet: procesa 100% en el gabinete local",
       "Ajuste de tiempos de entreverde según normativas de seguridad vial",
-      "Seguimiento multiobjeto con matrices de densidad vehicular"
+      "Seguimiento multiobjeto con matrices de densidad vehicular",
     ],
     actionLabel: "Probar Protocolo Nocturno",
-    sceneTriggerId: "noche"
+    sceneTriggerId: "noche",
   },
   {
     id: "seguridad_nocturna",
     badge: "IMPACTO HUMANO & SEGURIDAD",
     title: "Protocolo Nocturno de Verde Bajo Demanda",
     subtitle: "El Semáforo Inteligente como Escudo de Seguridad Urbana",
-    narrative: "Entre las 22:00 y las 06:00 hs, la IA detecta la aproximación de un vehículo único hacia el cruce desierto y habilita el verde de inmediato, eliminando la detención estática del conductor en la oscuridad.",
-    highlightMetric: { value: "0,8s", label: "Tiempo de reacción para dar verde si el cruce está despejado" },
+    narrative:
+      "Entre las 22:00 y las 06:00 hs, la IA detecta la aproximación de un vehículo único hacia el cruce desierto y habilita el verde de inmediato, eliminando la detención estática del conductor en la oscuridad.",
+    highlightMetric: {
+      value: "0,8s",
+      label: "Tiempo de reacción para dar verde si el cruce está despejado",
+    },
     bullets: [
       "Elimina la espera en rojo cuando no hay tránsito cruzado",
       "Protege al vecino de sufrir abordajes o encerronas nocturnas",
       "Mantiene strictly las fases de seguridad y amarillos",
-      "Reconocimiento automático de velocidad y distancia de frenado"
+      "Reconocimiento automático de velocidad y distancia de frenado",
     ],
     actionLabel: "Ver Prioridad Peatonal y SAME",
-    sceneTriggerId: "peaton"
+    sceneTriggerId: "peaton",
   },
   {
     id: "emergencia_peaton",
     badge: "VIDAS Y SALUD",
     title: "Prioridad Peatonal & Corredor de Emergencia SAME",
     subtitle: "Protección Integral de la Comunidad en la Vía Pública",
-    narrative: "El sistema extiende automáticamente el cruce para peatones con movilidad reducida o adultos mayores, y abre la 'ola verde' para ambulancias del SAME y vehículos de bomberos que se dirigen al hospital.",
+    narrative:
+      "El sistema extiende automáticamente el cruce para peatones con movilidad reducida o adultos mayores, y abre la 'ola verde' para ambulancias del SAME y vehículos de bomberos que se dirigen al hospital.",
     highlightMetric: { value: "3,5 min", label: "Ahorrados en traslados de emergencia crítica" },
     bullets: [
       "Detección de personas en senda peatonal con temporizador extendido adaptativo",
       "Reconocimiento óptico y V2I de balizas de ambulancia SAME y Policía",
       "Transición fluida a ciclo habitual sin provocar sobresaltos en el tráfico",
-      "Fail-safe determinista: ante falla de hardware revierte al plan fijo en <1s"
+      "Fail-safe determinista: ante falla de hardware revierte al plan fijo en <1s",
     ],
     actionLabel: "Ver Plan de Inversión y ROI",
-    sceneTriggerId: "failsafe"
+    sceneTriggerId: "failsafe",
   },
   {
     id: "roi_municipal",
     badge: "MODELO ECONOMICO 3F",
     title: "Propuesta Financiera y Escalabilidad Municipal",
     subtitle: "Máxima Tecnología al Menor Costo del Mercado",
-    narrative: "Un plan progresivo diseñado para la realidad presupuestaria municipal. Comenzando con un piloto de costo cero para el Municipio en 1 intersección crítica de Caseros antes de expandir al corredor principal.",
-    highlightMetric: { value: "USD 2,04M", label: "Ahorro total estimado para 3F en 5 años de operación" },
+    narrative:
+      "Un plan progresivo diseñado para la realidad presupuestaria municipal. Comenzando con un piloto de costo cero para el Municipio en 1 intersección crítica de Caseros antes de expandir al corredor principal.",
+    highlightMetric: {
+      value: "USD 2,04M",
+      label: "Ahorro total estimado para 3F en 5 años de operación",
+    },
     bullets: [
       "Costo por esquina: USD 3.000 (frente a USD 18.000–25.000 de competidores internacionales)",
       "Aprovecha el 100% de la infraestructura semafórica y gabinetes existentes",
       "Auditoría abierta y datos soberanos pertenecientes al Municipio de Tres de Febrero",
-      "Piloto propuesto: Av. San Martín y Av. Urquiza (Caseros)"
+      "Piloto propuesto: Av. San Martín y Av. Urquiza (Caseros)",
     ],
     actionLabel: "Finalizar Presentación",
-    sceneTriggerId: "pico"
-  }
+    sceneTriggerId: "pico",
+  },
 ];
 
 export function PitchModeModal({
@@ -142,7 +157,7 @@ export function PitchModeModal({
   }, [currentSlide, onSelectScene, slide.sceneTriggerId]);
 
   useEffect(() => {
-    let timer: any;
+    let timer: ReturnType<typeof setInterval> | undefined;
     if (isPlaying) {
       timer = setInterval(() => {
         setCurrentSlide((prev) => {
@@ -154,7 +169,9 @@ export function PitchModeModal({
         });
       }, 12000);
     }
-    return () => clearInterval(timer);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [isPlaying]);
 
   if (!isOpen) return null;
@@ -173,14 +190,18 @@ export function PitchModeModal({
               <span className="font-mono text-xs font-bold tracking-widest text-signal-green uppercase">
                 {slide.badge}
               </span>
-              <p className="text-xs text-muted-foreground">Presentación Ejecutiva para Autoridades de Tres de Febrero</p>
+              <p className="text-xs text-muted-foreground">
+                Presentación Ejecutiva para Autoridades de Tres de Febrero
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsPlaying(!isPlaying)}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-mono text-xs font-medium transition-colors ${
-                isPlaying ? "bg-signal-amber/20 text-signal-amber border border-signal-amber/30" : "bg-primary text-primary-foreground hover:bg-primary/90"
+                isPlaying
+                  ? "bg-signal-amber/20 text-signal-amber border border-signal-amber/30"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
               }`}
             >
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -204,9 +225,7 @@ export function PitchModeModal({
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                   {slide.title}
                 </h2>
-                <h3 className="mt-1 text-sm font-medium text-signal-green">
-                  {slide.subtitle}
-                </h3>
+                <h3 className="mt-1 text-sm font-medium text-signal-green">{slide.subtitle}</h3>
                 <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                   {slide.narrative}
                 </p>
@@ -286,7 +305,9 @@ export function PitchModeModal({
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
                 className={`h-2 rounded-full transition-all cursor-pointer ${
-                  idx === currentSlide ? "w-6 bg-signal-green" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                  idx === currentSlide
+                    ? "w-6 bg-signal-green"
+                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
                 }`}
                 title={`Ver diapositiva ${idx + 1}`}
               />

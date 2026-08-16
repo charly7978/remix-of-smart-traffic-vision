@@ -118,16 +118,16 @@ export function CounterfactualPanel({
               <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                 Perfil vigente
               </p>
-              <p className="mt-2 font-mono text-2xl text-foreground">
-                {base.seconds.toFixed(1)} s
-              </p>
+              <p className="mt-2 font-mono text-2xl text-foreground">{base.seconds.toFixed(1)} s</p>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                 {base.rationale}
               </p>
             </article>
             <article
               className={`rounded-lg border p-3 ${
-                changed ? "border-signal-amber/50 bg-signal-amber/5" : "border-border bg-secondary/35"
+                changed
+                  ? "border-signal-amber/50 bg-signal-amber/5"
+                  : "border-border bg-secondary/35"
               }`}
             >
               <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">

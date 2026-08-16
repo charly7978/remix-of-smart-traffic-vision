@@ -170,12 +170,15 @@ function CalculadoraRoi3F() {
             Calculadora de Retorno e Inversión para Tres de Febrero
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Ajuste el número de semáforos para proyectar la inversión requerida vs soluciones corporativas tradicionales.
+            Ajuste el número de semáforos para proyectar la inversión requerida vs soluciones
+            corporativas tradicionales.
           </p>
         </div>
 
         <div className="text-right">
-          <p className="font-mono text-xs text-muted-foreground uppercase">Intersecciones Seleccionadas</p>
+          <p className="font-mono text-xs text-muted-foreground uppercase">
+            Intersecciones Seleccionadas
+          </p>
           <p className="font-mono text-4xl font-black text-signal-green">{intersecciones}</p>
         </div>
       </div>
@@ -201,35 +204,51 @@ function CalculadoraRoi3F() {
       {/* Metrics Results Grid */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-secondary/30 p-4">
-          <p className="font-mono text-[10px] text-muted-foreground uppercase">Presupuesto Proyecto Ameghino</p>
+          <p className="font-mono text-[10px] text-muted-foreground uppercase">
+            Presupuesto Proyecto Ameghino
+          </p>
           <p className="mt-2 font-mono text-2xl font-bold text-signal-green">
             USD {inversion3F.toLocaleString("es-AR")}
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">USD {costoFull}/esquina hardware full</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            USD {costoFull}/esquina hardware full
+          </p>
         </div>
 
         <div className="rounded-xl border border-border bg-secondary/30 p-4">
-          <p className="font-mono text-[10px] text-muted-foreground uppercase">Contrato Corporativo Llave en Mano</p>
+          <p className="font-mono text-[10px] text-muted-foreground uppercase">
+            Contrato Corporativo Llave en Mano
+          </p>
           <p className="mt-2 font-mono text-2xl font-bold text-signal-red">
             USD {inversionCorporativa.toLocaleString("es-AR")}
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">USD 20.000/esquina promedio mercado</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            USD 20.000/esquina promedio mercado
+          </p>
         </div>
 
         <div className="rounded-xl border border-signal-green/40 bg-signal-green/10 p-4">
-          <p className="font-mono text-[10px] text-signal-green uppercase font-bold">Ahorro Neto Municipal Directo</p>
+          <p className="font-mono text-[10px] text-signal-green uppercase font-bold">
+            Ahorro Neto Municipal Directo
+          </p>
           <p className="mt-2 font-mono text-2xl font-black text-signal-green">
             USD {ahorroDirecto.toLocaleString("es-AR")}
           </p>
-          <p className="mt-1 text-[11px] text-foreground/80 font-medium">Capacidad de ahorro de un 85%</p>
+          <p className="mt-1 text-[11px] text-foreground/80 font-medium">
+            Capacidad de ahorro de un 85%
+          </p>
         </div>
 
         <div className="rounded-xl border border-border bg-secondary/30 p-4">
-          <p className="font-mono text-[10px] text-muted-foreground uppercase">Impacto Ambiental Anual</p>
+          <p className="font-mono text-[10px] text-muted-foreground uppercase">
+            Impacto Ambiental Anual
+          </p>
           <p className="mt-2 font-mono text-xl font-bold text-foreground">
             {co2EvitadoAnno} ton CO₂
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">{combustibleAhorrado.toLocaleString("es-AR")} litros de nafta/año</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {combustibleAhorrado.toLocaleString("es-AR")} litros de nafta/año
+          </p>
         </div>
       </div>
     </div>
@@ -259,7 +278,13 @@ const COSTOS_MINIMA = [
     "USD 60",
     "USD 60",
   ],
-  ["Cableado, montaje y accesorios", "Prensacables, soportes, protecciones", "1", "USD 85", "USD 85"],
+  [
+    "Cableado, montaje y accesorios",
+    "Prensacables, soportes, protecciones",
+    "1",
+    "USD 85",
+    "USD 85",
+  ],
   [
     "Instalación y mano de obra",
     "Técnico electricista + asistencia (jornada)",
@@ -270,13 +295,7 @@ const COSTOS_MINIMA = [
 ];
 
 const COSTOS_FULL = [
-  [
-    "Unidad de cómputo de borde",
-    "NVIDIA Jetson Orin Nano Super (8 GB)",
-    "1",
-    "USD 249",
-    "USD 249",
-  ],
+  ["Unidad de cómputo de borde", "NVIDIA Jetson Orin Nano Super (8 GB)", "1", "USD 249", "USD 249"],
   ["Cámara de visión", "IP 4MP con WDR y visión nocturna IR", "1", "USD 180", "USD 180"],
   [
     "Gabinete de intemperie",
@@ -292,7 +311,7 @@ const COSTOS_FULL = [
     "USD 260",
     "USD 260",
   ],
-  ["Conectividad", "Módem 4G/5G industrial dual-SIM", "1", "USD 320", "USD 320",],
+  ["Conectividad", "Módem 4G/5G industrial dual-SIM", "1", "USD 320", "USD 320"],
   [
     "Interfaz de relés / NTCIP",
     "Controlador de interfaz certificado NTCIP",
@@ -300,7 +319,13 @@ const COSTOS_FULL = [
     "USD 420",
     "USD 420",
   ],
-  ["Cableado, montaje y accesorios", "Kit completo con protección antivandálica", "1", "USD 250", "USD 250"],
+  [
+    "Cableado, montaje y accesorios",
+    "Kit completo con protección antivandálica",
+    "1",
+    "USD 250",
+    "USD 250",
+  ],
   [
     "Instalación y mano de obra",
     "Cuadrilla especializada + puesta en marcha y calibración",
@@ -490,10 +515,9 @@ function ProyectoPage() {
       </p>
       <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
         Documento técnico-económico elaborado para su evaluación por autoridades del Municipio de
-        Tres de Febrero y de la Provincia de Buenos Aires. Reúne el diagnóstico del problema,
-        la arquitectura de la solución, los costos de referencia, la hoja de ruta de
-        implementación, el marco legal aplicable y el pedido concreto de autorización de una
-        prueba piloto.
+        Tres de Febrero y de la Provincia de Buenos Aires. Reúne el diagnóstico del problema, la
+        arquitectura de la solución, los costos de referencia, la hoja de ruta de implementación, el
+        marco legal aplicable y el pedido concreto de autorización de una prueba piloto.
       </p>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -517,12 +541,11 @@ function ProyectoPage() {
             <article className="rounded-xl border border-border bg-card p-6">
               <h3 className="text-base font-semibold text-foreground">El problema</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Caseros y el resto del partido de Tres de Febrero conviven a diario con demoras
-                de tránsito en horas pico, semáforos con tiempos fijos que no responden a la
-                demanda real y esquinas con visibilidad reducida por la noche. Estas condiciones
-                inciden directamente sobre la siniestralidad vial, el consumo de combustible y la
-                calidad de vida de los vecinos, en un partido densamente poblado del conurbano
-                bonaerense.
+                Caseros y el resto del partido de Tres de Febrero conviven a diario con demoras de
+                tránsito en horas pico, semáforos con tiempos fijos que no responden a la demanda
+                real y esquinas con visibilidad reducida por la noche. Estas condiciones inciden
+                directamente sobre la siniestralidad vial, el consumo de combustible y la calidad de
+                vida de los vecinos, en un partido densamente poblado del conurbano bonaerense.
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6">
@@ -530,19 +553,19 @@ function ProyectoPage() {
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 El abaratamiento de las plataformas de cómputo en el borde (Raspberry Pi, NVIDIA
                 Jetson) y la madurez de los modelos de visión por computadora de código abierto
-                permiten construir un sistema de semaforización adaptativa a una fracción del
-                costo de las soluciones corporativas, sin resignar los estándares de seguridad
-                exigidos por la normativa vigente.
+                permiten construir un sistema de semaforización adaptativa a una fracción del costo
+                de las soluciones corporativas, sin resignar los estándares de seguridad exigidos
+                por la normativa vigente.
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6">
               <h3 className="text-base font-semibold text-foreground">Por qué ahora</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 Existe alineación directa con los objetivos de seguridad vial impulsados a nivel
-                nacional y provincial y con la agenda ambiental de reducción de emisiones en
-                zonas urbanas densas. Un piloto de bajo costo y bajo riesgo permite al Municipio y
-                a la Provincia evaluar resultados concretos antes de comprometer presupuestos de
-                mayor escala.
+                nacional y provincial y con la agenda ambiental de reducción de emisiones en zonas
+                urbanas densas. Un piloto de bajo costo y bajo riesgo permite al Municipio y a la
+                Provincia evaluar resultados concretos antes de comprometer presupuestos de mayor
+                escala.
               </p>
             </article>
           </div>
@@ -567,7 +590,13 @@ function ProyectoPage() {
 
           <SubHeading>Variante mínima viable (Raspberry Pi)</SubHeading>
           <DataTable
-            head={["Componente", "Especificación", "Unidad", "Costo unitario (USD)", "Subtotal (USD)"]}
+            head={[
+              "Componente",
+              "Especificación",
+              "Unidad",
+              "Costo unitario (USD)",
+              "Subtotal (USD)",
+            ]}
             rows={COSTOS_MINIMA}
             footRow={["Total variante mínima viable", "", "", "", "USD 950"]}
           />
@@ -576,22 +605,29 @@ function ProyectoPage() {
 
           <SubHeading>Variante full (NVIDIA Jetson Orin Nano Super)</SubHeading>
           <DataTable
-            head={["Componente", "Especificación", "Unidad", "Costo unitario (USD)", "Subtotal (USD)"]}
+            head={[
+              "Componente",
+              "Especificación",
+              "Unidad",
+              "Costo unitario (USD)",
+              "Subtotal (USD)",
+            ]}
             rows={COSTOS_FULL}
             footRow={["Total variante full", "", "", "", "USD 3.039"]}
           />
 
           <p className="mt-6 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Ambas variantes se ubican muy por debajo del costo de referencia de soluciones
-            corporativas llave en mano, estimado entre <span className="text-foreground">USD
-            15.000 y USD 20.000 por intersección</span>, que incluyen controladores propietarios,
-            licenciamiento de software cerrado y contratos de mantenimiento de largo plazo.
+            corporativas llave en mano, estimado entre{" "}
+            <span className="text-foreground">USD 15.000 y USD 20.000 por intersección</span>, que
+            incluyen controladores propietarios, licenciamiento de software cerrado y contratos de
+            mantenimiento de largo plazo.
           </p>
           <Note>
-            Los precios de componentes corresponden a valores de lista publicados por
-            fabricantes y distribuidores al momento de redacción de este documento; no incluyen
-            impuestos de importación, flete ni variaciones cambiarias, y deben confirmarse
-            mediante cotización formal previa a la compra.
+            Los precios de componentes corresponden a valores de lista publicados por fabricantes y
+            distribuidores al momento de redacción de este documento; no incluyen impuestos de
+            importación, flete ni variaciones cambiarias, y deben confirmarse mediante cotización
+            formal previa a la compra.
           </Note>
         </Section>
 
@@ -702,13 +738,15 @@ function ProyectoPage() {
             <article className="rounded-xl border border-border bg-card p-6">
               <h3 className="text-lg font-semibold text-foreground">DNDA — Ley 11.723</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Registro del código fuente y de la documentación técnica ante la Dirección
-                Nacional del Derecho de Autor, que fija fecha cierta de autoría sobre el software
-                y la arquitectura lógica del sistema.
+                Registro del código fuente y de la documentación técnica ante la Dirección Nacional
+                del Derecho de Autor, que fija fecha cierta de autoría sobre el software y la
+                arquitectura lógica del sistema.
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground">INPI — marca y modelo de utilidad</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                INPI — marca y modelo de utilidad
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 Registro de la marca &quot;Ameghino AI&quot; ante el Instituto Nacional de la
                 Propiedad Industrial, y evaluación de un modelo de utilidad sobre la integración
@@ -716,30 +754,36 @@ function ProyectoPage() {
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground">Ley 24.449 y decreto reglamentario</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                Ley 24.449 y decreto reglamentario
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 El sistema respeta el Sistema de Señalización Vial Uniforme establecido por la Ley
                 Nacional de Tránsito y su decreto reglamentario. La unidad de IA actúa como
-                supervisor de demanda; el controlador conserva siempre las protecciones de
-                hardware que impiden estados de conflicto entre fases.
+                supervisor de demanda; el controlador conserva siempre las protecciones de hardware
+                que impiden estados de conflicto entre fases.
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6">
-              <h3 className="text-lg font-semibold text-foreground">Normativa municipal y homologación</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                Normativa municipal y homologación
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                La instalación en la vía pública requiere autorización expresa del Municipio de
-                Tres de Febrero y homologación técnica de los controladores ante la autoridad
-                provincial competente, conforme a los procedimientos vigentes.
+                La instalación en la vía pública requiere autorización expresa del Municipio de Tres
+                de Febrero y homologación técnica de los controladores ante la autoridad provincial
+                competente, conforme a los procedimientos vigentes.
               </p>
             </article>
             <article className="rounded-xl border border-border bg-card p-6 md:col-span-2">
-              <h3 className="text-lg font-semibold text-foreground">Ley 25.326 — Protección de datos personales</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                Ley 25.326 — Protección de datos personales
+              </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 El sistema procesa la imagen exclusivamente en el borde (edge computing): no se
                 almacenan rostros ni patentes, ni se transmite video hacia servidores centrales.
                 Únicamente se conservan y transmiten metadatos agregados y anonimizados —conteo de
-                vehículos, densidad y tiempos de ciclo—, en línea con los principios de
-                minimización de datos y finalidad establecidos por la Ley 25.326.
+                vehículos, densidad y tiempos de ciclo—, en línea con los principios de minimización
+                de datos y finalidad establecidos por la Ley 25.326.
               </p>
             </article>
           </div>
@@ -767,16 +811,20 @@ function ProyectoPage() {
             </div>
             <div className="flex flex-col gap-4">
               <article className="rounded-xl border border-border bg-card p-6">
-                <h3 className="text-lg font-semibold text-foreground">Convenio universidad–municipio</h3>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Convenio universidad–municipio
+                </h3>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                   Se propone un convenio marco entre el Municipio de Tres de Febrero, una
-                  universidad con sede en el partido y el equipo del Proyecto Carlos Ameghino,
-                  que formalice el acceso a la vía pública, la provisión de datos anonimizados
-                  para investigación y la transferencia de conocimiento técnico local.
+                  universidad con sede en el partido y el equipo del Proyecto Carlos Ameghino, que
+                  formalice el acceso a la vía pública, la provisión de datos anonimizados para
+                  investigación y la transferencia de conocimiento técnico local.
                 </p>
               </article>
               <article className="rounded-xl border border-border bg-card p-6">
-                <h3 className="text-lg font-semibold text-foreground">Auditoría de decisiones del sistema</h3>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Auditoría de decisiones del sistema
+                </h3>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                   Cada cambio de fase del semáforo motivado por el algoritmo queda registrado con
                   marca temporal, densidad detectada y estado del controlador, disponible para
@@ -798,15 +846,13 @@ function ProyectoPage() {
           Lo que se solicita al funcionario
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          El Proyecto Carlos Ameghino cuenta con un prototipo lógico en funcionamiento y una hoja
-          de ruta técnica y financiera detallada. Para avanzar a la Fase 1 se solicita
-          concretamente:
+          El Proyecto Carlos Ameghino cuenta con un prototipo lógico en funcionamiento y una hoja de
+          ruta técnica y financiera detallada. Para avanzar a la Fase 1 se solicita concretamente:
         </p>
         <ul className="mt-4 flex max-w-2xl flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
           <li>
-            <span className="text-foreground">1.</span> Autorización formal para instalar un
-            piloto de supervisión en una intersección de Caseros, previamente acordada con el
-            Municipio.
+            <span className="text-foreground">1.</span> Autorización formal para instalar un piloto
+            de supervisión en una intersección de Caseros, previamente acordada con el Municipio.
           </li>
           <li>
             <span className="text-foreground">2.</span> Un punto de energía eléctrica en dicha
@@ -814,8 +860,8 @@ function ProyectoPage() {
           </li>
           <li>
             <span className="text-foreground">3.</span> Acceso técnico al cruce y al gabinete del
-            controlador existente para la instalación de la interfaz de relés, bajo supervisión
-            del área municipal competente.
+            controlador existente para la instalación de la interfaz de relés, bajo supervisión del
+            área municipal competente.
           </li>
         </ul>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">

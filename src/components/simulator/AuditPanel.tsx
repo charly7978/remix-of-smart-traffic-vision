@@ -39,8 +39,8 @@ export function AuditPanel({
   if (!frame) {
     return (
       <p className="text-sm text-muted-foreground">
-        Grabando fotogramas de auditoría… en unos segundos podrá recorrer la evidencia visual
-        cuadro por cuadro.
+        Grabando fotogramas de auditoría… en unos segundos podrá recorrer la evidencia visual cuadro
+        por cuadro.
       </p>
     );
   }
@@ -54,7 +54,9 @@ export function AuditPanel({
           type="button"
           onClick={onTogglePause}
           className={`rounded-md px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase ${
-            paused ? "bg-signal-amber text-primary-foreground" : "bg-secondary text-muted-foreground"
+            paused
+              ? "bg-signal-amber text-primary-foreground"
+              : "bg-secondary text-muted-foreground"
           }`}
         >
           {paused ? "Simulación congelada" : "Congelar simulación"}
