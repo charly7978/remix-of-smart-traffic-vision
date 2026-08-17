@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { DEFAULT_DRAW_OPTIONS, drawScene, type DrawOptions } from "@/components/simulator/draw";
 import { drawScene3D } from "@/components/simulator/render3d";
+import { ThreeCanvasSimulator } from "@/components/simulator/three/ThreeCanvasSimulator";
 import { AuditPanel, type AuditFrame } from "@/components/simulator/AuditPanel";
 import { CounterfactualPanel } from "@/components/simulator/CounterfactualPanel";
 import { EventTimeline } from "@/components/simulator/EventTimeline";
@@ -285,6 +286,8 @@ function SimuladorPage() {
   const [frames, setFrames] = useState<AuditFrame[]>([]);
   const [priority, setPriority] = useState<PriorityConfig>({ ...DEFAULT_PRIORITY });
   const [isPitchOpen, setIsPitchOpen] = useState(false);
+  const [renderEngineType, setRenderEngineType] = useState<"webgl" | "photo">("webgl");
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
   // Guion guiado
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -582,40 +585,146 @@ function SimuladorPage() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="flex flex-col gap-6">
-          {/* -------------------------- Visor Canvas 3D Fotorrealista -------------------------- */}
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="relative flex size-2">
+          {/* -------------------------- Visor 3D WebGL / Digital Twin -------------------------- */}
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            {/* Header del Visor con Selector de Motor */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 bg-muted/20">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex size-2.5">
                   <span className="absolute inline-flex size-full animate-ping rounded-full bg-signal-green opacity-70" />
-                  <span className="relative inline-flex size-2 rounded-full bg-signal-green" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-signal-green" />
                 </span>
-                <span className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
-                  SIMULADOR 3D EN TIEMPO REAL · {clock(snap?.hour ?? startHour)} ·{" "}
+                <span className="font-mono text-[11px] font-bold tracking-[0.2em] text-foreground uppercase">
+                  GEMELO DIGITAL 3D · CASEROS 3F · {clock(snap?.hour ?? startHour)} ·{" "}
                   {snap?.night ? "NOCTURNO" : "DIURNO"}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                <Toggle on={layers.analysis} onClick={() => toggleLayer("analysis")}>
-                  YOLOv11 Bounding Boxes
-                </Toggle>
-                <Toggle on={layers.cameras} onClick={() => toggleLayer("cameras")}>
-                  Conos de Visión
-                </Toggle>
-                <Toggle on={layers.hud} onClick={() => toggleLayer("hud")}>
-                  Telemetría HUD
-                </Toggle>
-                <Toggle on={layers.labels} onClick={() => toggleLayer("labels")}>
-                  Rótulos de Calles
-                </Toggle>
+
+              {/* Selector de Motor 3D (WebGL GPU vs. Aérea 2D) */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-background/80 border border-border text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => setRenderEngineType("webgl")}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    renderEngineType === "webgl"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  🚀 WebGL 3D (Three.js GPU)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRenderEngineType("photo")}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    renderEngineType === "photo"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  📸 Fotogrametría 2.5D
+                </button>
               </div>
             </div>
-            <canvas
-              ref={canvasRef}
-              className="block h-auto w-full"
-              style={{ aspectRatio: "1 / 1" }}
-              aria-label="Simulador 3D fotorrealista de la intersección de Caseros controlada por IA"
-            />
+
+            {/* Renderizador Activo */}
+            {renderEngineType === "webgl" && engineRef.current ? (
+              <div className="p-2 bg-slate-950">
+                <ThreeCanvasSimulator
+                  engine={engineRef.current}
+                  selectedVehicle={selectedVehicle}
+                  onSelectVehicle={setSelectedVehicle}
+                />
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="flex flex-wrap gap-1.5 p-3 border-b border-border bg-background/50">
+                  <Toggle on={layers.analysis} onClick={() => toggleLayer("analysis")}>
+                    YOLOv11 Bounding Boxes
+                  </Toggle>
+                  <Toggle on={layers.cameras} onClick={() => toggleLayer("cameras")}>
+                    Conos de Visión
+                  </Toggle>
+                  <Toggle on={layers.hud} onClick={() => toggleLayer("hud")}>
+                    Telemetría HUD
+                  </Toggle>
+                  <Toggle on={layers.labels} onClick={() => toggleLayer("labels")}>
+                    Rótulos de Calles
+                  </Toggle>
+                </div>
+                <canvas
+                  ref={canvasRef}
+                  className="block h-auto w-full"
+                  style={{ aspectRatio: "1 / 1" }}
+                  aria-label="Simulador fotorrealista de la intersección de Caseros"
+                />
+              </div>
+            )}
+
+            {/* Ficha de Inspección Telemetría de Vehículo Seleccionado */}
+            {selectedVehicle && (
+              <div className="mx-4 my-3 p-3.5 rounded-xl border border-primary/40 bg-primary/5 flex flex-wrap items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-3">
+                  <div className="size-9 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center font-mono font-bold text-primary text-sm">
+                    #{selectedVehicle.id}
+                  </div>
+                  <div>
+                    <h4 className="font-mono text-xs font-bold text-foreground capitalize">
+                      {selectedVehicle.kind === "bus"
+                        ? "Colectivo Línea 343"
+                        : selectedVehicle.kind === "ambulance"
+                          ? "Ambulancia SAME 3F"
+                          : selectedVehicle.kind === "moto"
+                            ? "Moto / Repartidor"
+                            : "Automóvil Particular"}
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground font-mono">
+                      Acceso:{" "}
+                      {selectedVehicle.approach === "N"
+                        ? "Av. San Martín (Noroeste)"
+                        : selectedVehicle.approach === "S"
+                          ? "Av. San Martín (Sudeste)"
+                          : selectedVehicle.approach === "W"
+                            ? "Calle Urquiza (Sudoeste)"
+                            : "Calle Urquiza (Noreste)"}{" "}
+                      · Confianza YOLOv11: {((selectedVehicle.conf || 0.98) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 font-mono text-xs">
+                  <div className="px-2.5 py-1 rounded-md bg-secondary/80 border border-border">
+                    Velocidad:{" "}
+                    <span className="font-bold text-foreground">
+                      {Math.round(selectedVehicle.speed * 4.5)} km/h
+                    </span>
+                  </div>
+                  <div className="px-2.5 py-1 rounded-md bg-secondary/80 border border-border">
+                    Semáforo:{" "}
+                    <span
+                      className={`font-bold ${
+                        engineRef.current?.signalFor(selectedVehicle.approach) === "green"
+                          ? "text-signal-green"
+                          : engineRef.current?.signalFor(selectedVehicle.approach) === "amber"
+                            ? "text-signal-amber"
+                            : "text-signal-red"
+                      }`}
+                    >
+                      {engineRef.current?.signalFor(selectedVehicle.approach).toUpperCase()}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVehicle(null)}
+                    className="px-2 py-1 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    ✕ Cerrar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Leyenda de Tipología */}
             <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border px-4 py-3 font-mono text-[10px] text-muted-foreground">
               <span className="flex items-center gap-2">
                 <span className="inline-block size-2.5 rounded-[2px] border border-signal-green" />
