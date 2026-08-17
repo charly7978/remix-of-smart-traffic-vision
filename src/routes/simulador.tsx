@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { DEFAULT_DRAW_OPTIONS, drawScene, type DrawOptions } from "@/components/simulator/draw";
 import { drawScene3D } from "@/components/simulator/render3d";
+import { loadSprites } from "@/lib/photo/spriteManager";
 import { AuditPanel, type AuditFrame } from "@/components/simulator/AuditPanel";
 import { CounterfactualPanel } from "@/components/simulator/CounterfactualPanel";
 import { EventTimeline } from "@/components/simulator/EventTimeline";
@@ -304,6 +305,7 @@ function SimuladorPage() {
   pausedRef.current = paused;
 
   useEffect(() => {
+    loadSprites();
     const engine = new TrafficEngine();
     engine.setFlowProfile(flow);
     engine.setEvents(mode === "guiado" ? [] : events);
