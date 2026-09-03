@@ -9,6 +9,7 @@ import { CounterfactualPanel } from "@/components/simulator/CounterfactualPanel"
 import { EventTimeline } from "@/components/simulator/EventTimeline";
 import { FLOW_PRESETS, FlowProfileEditor } from "@/components/simulator/FlowProfileEditor";
 import { WaitChart } from "@/components/simulator/WaitChart";
+import { GeometryEditor } from "@/components/simulator/GeometryEditor";
 import { PitchModeModal } from "@/components/simulator/PitchModeModal";
 import {
   APPROACH_LABEL_ES,
@@ -286,6 +287,7 @@ function SimuladorPage() {
   const [frames, setFrames] = useState<AuditFrame[]>([]);
   const [priority, setPriority] = useState<PriorityConfig>({ ...DEFAULT_PRIORITY });
   const [isPitchOpen, setIsPitchOpen] = useState(false);
+  const [isCalibrating, setIsCalibrating] = useState(false);
 
   // Guion guiado
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -302,7 +304,7 @@ function SimuladorPage() {
 
   optsRef.current = layers;
   viewRef.current = view;
-  pausedRef.current = paused;
+  pausedRef.current = paused || isCalibrating; // Pausa forzada durante calibración
 
   useEffect(() => {
     loadSprites();
@@ -401,6 +403,16 @@ function SimuladorPage() {
     e.setClockRunning(true);
     s.apply(e);
     setSceneProgress(0);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "c" && !e.ctrlKey && !e.metaKey && e.target === document.body) {
+        setIsCalibrating((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -612,12 +624,21 @@ function SimuladorPage() {
                 </Toggle>
               </div>
             </div>
-            <canvas
-              ref={canvasRef}
-              className="block h-auto w-full"
-              style={{ aspectRatio: "1 / 1" }}
-              aria-label="Simulador 3D fotorrealista de la intersección de Caseros controlada por IA"
-            />
+            <div className="relative">
+              {isCalibrating && <GeometryEditor onClose={() => setIsCalibrating(false)} />}
+              <canvas
+                ref={canvasRef}
+                className="block h-auto w-full cursor-crosshair"
+                style={{ aspectRatio: "1 / 1" }}
+                aria-label="Simulador 3D fotorrealista de la intersección de Caseros controlada por IA"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = (e.clientX - rect.left) * (800 / rect.width);
+                  const y = (e.clientY - rect.top) * (800 / rect.height);
+                  console.log(`[CALIBRATION] Clicked at: x=${x.toFixed(1)}, y=${y.toFixed(1)}`);
+                }}
+              />
+            </div>
             <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border px-4 py-3 font-mono text-[10px] text-muted-foreground">
               <span className="flex items-center gap-2">
                 <span className="inline-block size-2.5 rounded-[2px] border border-signal-green" />
