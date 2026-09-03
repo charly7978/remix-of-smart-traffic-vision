@@ -364,24 +364,25 @@ export class VisionAnalyzer {
   }
 
   private dilate(mask: Uint8Array, w: number, h: number, iterations: number): Uint8Array {
-    let src = mask;
-    let out = new Uint8Array(src.length);
+    let currentSrc = mask;
+    let currentOut = new Uint8Array(mask.length);
     for (let it = 0; it < iterations; it++) {
+      currentOut = new Uint8Array(mask.length);
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           const i = y * w + x;
-          if (src[i] === 255) {
-            out[i] = 255;
-            if (x > 0) out[i - 1] = 255;
-            if (x < w - 1) out[i + 1] = 255;
-            if (y > 0) out[i - w] = 255;
-            if (y < h - 1) out[i + w] = 255;
+          if (currentSrc[i] === 255) {
+            currentOut[i] = 255;
+            if (x > 0) currentOut[i - 1] = 255;
+            if (x < w - 1) currentOut[i + 1] = 255;
+            if (y > 0) currentOut[i - w] = 255;
+            if (y < h - 1) currentOut[i + w] = 255;
           }
         }
       }
-      if (it < iterations - 1) src = out;
+      currentSrc = currentOut;
     }
-    return out;
+    return currentOut;
   }
 
   /** Etiquetado de componentes conexos usando flood-fill con cola (BFS). */
@@ -580,10 +581,7 @@ export class VisionAnalyzer {
     return union > 0 ? inter / union : 0;
   }
 
-  private queueOnAxis(
-    detections: VisionDetection[],
-    axis: VisionAxis,
-  ): number {
+  private queueOnAxis(detections: VisionDetection[], axis: VisionAxis): number {
     // Definir línea de detención normalizada por eje
     const stopLine = axis === "NS" ? 0.42 : 0.58;
     let count = 0;

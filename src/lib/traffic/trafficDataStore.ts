@@ -53,21 +53,57 @@ export interface FailSafeEntry {
 
 export interface MunicipalDataStore {
   flowProfiles: FlowProfile[];
+  activeProfileId: string | null;
   realEvents: ScenarioEvent[];
   cameras: CameraConfig[];
   failSafeLog: FailSafeEntry[];
 }
 
 /* ------------------------------------------------------------------ */
-/* Constantes                                                          */
+/* Constantes y Datos por Defecto de Caseros                          */
 /* ------------------------------------------------------------------ */
 
 const STORAGE_KEY = "ameghino_municipal_data";
 
+export const CASEROS_DEFAULT_PROFILE: FlowProfile = {
+  id: "caseros-sanmartin-urquiza",
+  name: "Aforo Real Caseros (Av. San Martín y Urquiza)",
+  uploadedAt: "2026-09-01T08:00:00.000Z",
+  source: "manual",
+  profile: [
+    120, 80, 50, 45, 90, 240, 680, 1150, 1420, 1280, 1120, 1050, 1180, 1220, 1190, 1310, 1480, 1620,
+    1540, 1260, 980, 720, 450, 260,
+  ],
+};
+
+export const CASEROS_DEFAULT_CAMERAS: CameraConfig[] = [
+  {
+    id: "cam-caseros-norte",
+    label: "Cámara 1 (Norte) · Av. San Martín (COM Caseros)",
+    approach: "N",
+    kind: "snapshot-http",
+    url: "/images/caseros-monitoreo.png",
+    refreshMs: 1200,
+    lastConnected: null,
+    enabled: true,
+  },
+  {
+    id: "cam-caseros-este",
+    label: "Cámara 2 (Este) · Calle Urquiza (Estación Caseros)",
+    approach: "E",
+    kind: "snapshot-http",
+    url: "/images/cruce-tres-de-febrero-dia.jpg",
+    refreshMs: 1200,
+    lastConnected: null,
+    enabled: true,
+  },
+];
+
 const EMPTY_STORE: MunicipalDataStore = {
-  flowProfiles: [],
+  flowProfiles: [CASEROS_DEFAULT_PROFILE],
+  activeProfileId: CASEROS_DEFAULT_PROFILE.id,
   realEvents: [],
-  cameras: [],
+  cameras: CASEROS_DEFAULT_CAMERAS,
   failSafeLog: [],
 };
 
@@ -84,11 +120,21 @@ function loadFromStorage(): MunicipalDataStore {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...EMPTY_STORE };
-    const parsed = JSON.parse(raw) as MunicipalDataStore;
+    const parsed = JSON.parse(raw) as Partial<MunicipalDataStore>;
+    const flowProfiles =
+      Array.isArray(parsed.flowProfiles) && parsed.flowProfiles.length > 0
+        ? parsed.flowProfiles
+        : [CASEROS_DEFAULT_PROFILE];
+    const cameras =
+      Array.isArray(parsed.cameras) && parsed.cameras.length > 0
+        ? parsed.cameras
+        : CASEROS_DEFAULT_CAMERAS;
+
     return {
-      flowProfiles: Array.isArray(parsed.flowProfiles) ? parsed.flowProfiles : [],
+      flowProfiles,
+      activeProfileId: parsed.activeProfileId ?? flowProfiles[0]?.id ?? null,
       realEvents: Array.isArray(parsed.realEvents) ? parsed.realEvents : [],
-      cameras: Array.isArray(parsed.cameras) ? parsed.cameras : [],
+      cameras,
       failSafeLog: Array.isArray(parsed.failSafeLog) ? parsed.failSafeLog : [],
     };
   } catch {
@@ -121,16 +167,34 @@ export function subscribe(fn: Listener): () => void {
   return () => listeners.delete(fn);
 }
 
-/* ---------- Flow Profiles ---------- */
+export function setActiveProfileId(id: string | null): void {
+  store = { ...store, activeProfileId: id };
+  persist();
+  notify();
+}
+
+export function getActiveProfile(): FlowProfile | null {
+  if (!store.activeProfileId) return store.flowProfiles[0] ?? null;
+  return (
+    store.flowProfiles.find((p) => p.id === store.activeProfileId) ?? store.flowProfiles[0] ?? null
+  );
+}
 
 export function addFlowProfile(profile: FlowProfile): void {
-  store = { ...store, flowProfiles: [profile, ...store.flowProfiles].slice(0, 20) };
+  store = {
+    ...store,
+    flowProfiles: [profile, ...store.flowProfiles].slice(0, 20),
+    activeProfileId: profile.id,
+  };
   persist();
   notify();
 }
 
 export function removeFlowProfile(id: string): void {
-  store = { ...store, flowProfiles: store.flowProfiles.filter((p) => p.id !== id) };
+  const newProfiles = store.flowProfiles.filter((p) => p.id !== id);
+  const newActive =
+    store.activeProfileId === id ? (newProfiles[0]?.id ?? null) : store.activeProfileId;
+  store = { ...store, flowProfiles: newProfiles, activeProfileId: newActive };
   persist();
   notify();
 }
@@ -193,6 +257,26 @@ export function addFailSafeEntry(entry: FailSafeEntry): void {
   notify();
 }
 
+export function resolveLastFailSafeEntry(reasonResolution = "Señal restablecida"): void {
+  const unresolvedIndex = store.failSafeLog.findIndex((e) => !e.resolved);
+  if (unresolvedIndex >= 0) {
+    const log = [...store.failSafeLog];
+    const prev = log[unresolvedIndex]!;
+    const now = Date.now();
+    const start = new Date(prev.timestamp).getTime();
+    const duration = Math.max(1, Math.round((now - start) / 1000));
+    log[unresolvedIndex] = {
+      ...prev,
+      resolved: true,
+      duration,
+      reason: `${prev.reason} (Resuelto: ${reasonResolution})`,
+    };
+    store = { ...store, failSafeLog: log };
+    persist();
+    notify();
+  }
+}
+
 export function clearFailSafeLog(): void {
   store = { ...store, failSafeLog: [] };
   persist();
@@ -219,10 +303,11 @@ export function parseFlowCsv(raw: string): number[] {
   }
 
   /* Detectar separador */
-  const sep = lines[0]!.includes(";") ? ";" : ",";
+  const firstLine = lines[0]!;
+  const sep = firstLine.includes("\t") ? "\t" : firstLine.includes(";") ? ";" : ",";
 
   /* Saltar encabezado si parece texto */
-  const startIdx = /^[a-zA-Z]/.test(lines[0]!.split(sep)[0]!.trim()) ? 1 : 0;
+  const startIdx = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ#]/.test(firstLine.split(sep)[0]!.trim()) ? 1 : 0;
 
   const profile: number[] = new Array(24).fill(0);
   let parsed = 0;

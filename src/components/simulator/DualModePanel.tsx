@@ -17,9 +17,17 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { DualSimulation, type DualSnapshot, type DualHistoryPoint } from "@/lib/traffic/dualSimulation";
+import {
+  DualSimulation,
+  type DualSnapshot,
+  type DualHistoryPoint,
+} from "@/lib/traffic/dualSimulation";
 import { DEFAULT_FLOW, type PriorityConfig, DEFAULT_PRIORITY } from "@/lib/traffic/engine";
-import { exportDualComparisonCSV } from "@/lib/traffic/telemetryExporter";
+import {
+  exportDualComparisonCSV,
+  exportDecisionsCSV,
+  exportDecisionsJSON,
+} from "@/lib/traffic/telemetryExporter";
 
 /* ------------------------------------------------------------------ */
 /* Componentes auxiliares                                               */
@@ -52,7 +60,9 @@ function DualMetric({
           <p className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
             IA Adaptativa
           </p>
-          <p className={`mt-1 font-mono text-lg font-semibold ${better ? "text-signal-green" : "text-signal-amber"}`}>
+          <p
+            className={`mt-1 font-mono text-lg font-semibold ${better ? "text-signal-green" : "text-signal-amber"}`}
+          >
             {adaptiveValue}
             <span className="ml-1 text-xs text-muted-foreground">{unit}</span>
           </p>
@@ -61,7 +71,9 @@ function DualMetric({
           <p className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
             Ciclo Fijo
           </p>
-          <p className={`mt-1 font-mono text-lg font-semibold ${!better ? "text-signal-green" : "text-signal-red"}`}>
+          <p
+            className={`mt-1 font-mono text-lg font-semibold ${!better ? "text-signal-green" : "text-signal-red"}`}
+          >
             {fixedValue}
             <span className="ml-1 text-xs text-muted-foreground">{unit}</span>
           </p>
@@ -75,7 +87,9 @@ function ImprovementBadge({ value, label }: { value: number; label: string }) {
   const positive = value > 0;
   return (
     <div className="flex flex-col items-center rounded-xl border border-border bg-card p-4">
-      <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">{label}</p>
+      <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+        {label}
+      </p>
       <p
         className={`mt-2 font-mono text-2xl font-bold ${
           positive ? "text-signal-green" : value < 0 ? "text-signal-red" : "text-muted-foreground"
@@ -179,7 +193,8 @@ export function DualModePanel({
             Modo Dual — IA Adaptativa vs. Ciclo Fijo
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Dos motores en paralelo con idéntico flujo vehicular. Compara reducción de esperas, throughput y emisiones.
+            Dos motores en paralelo con idéntico flujo vehicular. Compara reducción de esperas,
+            throughput y emisiones.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -224,9 +239,7 @@ export function DualModePanel({
         <>
           {/* Hora simulada */}
           <div className="mt-4 flex items-center gap-4">
-            <p className="font-mono text-sm text-foreground">
-              🕐 {clockLabel(snap.adaptive.hour)}
-            </p>
+            <p className="font-mono text-sm text-foreground">🕐 {clockLabel(snap.adaptive.hour)}</p>
             <p className="text-xs text-muted-foreground">
               Demanda: {snap.adaptive.demand} veh/h · {snap.adaptive.night ? "🌙 Noche" : "☀️ Día"}
             </p>
@@ -278,7 +291,11 @@ export function DualModePanel({
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={chartData.slice(-80)}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="hora" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                  <XAxis
+                    dataKey="hora"
+                    tick={{ fontSize: 10 }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
                   <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                   <Tooltip
                     contentStyle={{
@@ -310,14 +327,40 @@ export function DualModePanel({
           )}
 
           {/* Exportar */}
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => exportDualComparisonCSV(snap.history)}
-              className="rounded-lg border border-border bg-secondary/60 px-4 py-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase transition-colors hover:bg-accent hover:text-foreground"
-            >
-              ⬇ Exportar Comparación CSV
-            </button>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+                Exportar Auditoría:
+              </span>
+              <button
+                type="button"
+                onClick={() => exportDualComparisonCSV(snap.history)}
+                className="rounded-lg border border-border bg-secondary/60 px-3 py-1.5 font-mono text-[10px] tracking-widest text-foreground uppercase transition-colors hover:bg-accent"
+              >
+                📊 Comparación Dual (CSV)
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] tracking-widest text-signal-green uppercase font-semibold">
+                VideoTelemetry:
+              </span>
+              <button
+                type="button"
+                onClick={() => exportDecisionsCSV(snap.adaptive.decisions)}
+                disabled={snap.adaptive.decisions.length === 0}
+                className="rounded-lg border border-signal-green/30 bg-signal-green/10 px-3 py-1.5 font-mono text-[10px] tracking-widest text-signal-green uppercase transition-colors hover:bg-signal-green hover:text-white disabled:opacity-40"
+              >
+                ⬇ Telemetría (CSV)
+              </button>
+              <button
+                type="button"
+                onClick={() => exportDecisionsJSON(snap.adaptive.decisions)}
+                disabled={snap.adaptive.decisions.length === 0}
+                className="rounded-lg border border-signal-green/30 bg-signal-green/10 px-3 py-1.5 font-mono text-[10px] tracking-widest text-signal-green uppercase transition-colors hover:bg-signal-green hover:text-white disabled:opacity-40"
+              >
+                ⬇ Telemetría (JSON)
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -325,8 +368,8 @@ export function DualModePanel({
       {!snap && !running && (
         <div className="mt-8 flex flex-col items-center py-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Presioná <span className="font-semibold text-foreground">Iniciar Comparación</span> para ejecutar
-            ambos motores en paralelo con el mismo flujo vehicular.
+            Presioná <span className="font-semibold text-foreground">Iniciar Comparación</span> para
+            ejecutar ambos motores en paralelo con el mismo flujo vehicular.
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
             El motor adaptativo (Ameghino AI) usa la fórmula T_v = max(T_seg, min(T_max, β·σ)).

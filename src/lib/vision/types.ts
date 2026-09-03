@@ -141,11 +141,7 @@ export interface PublicCameraPreset {
 
 /** Fuente activa configurable en el panel. */
 export type VisionSourceKind =
-  | "synthetic"
-  | "webcam"
-  | "video-file"
-  | "snapshot-url"
-  | "public-preset";
+  "synthetic" | "webcam" | "video-file" | "snapshot-url" | "public-preset";
 
 export interface VisionSourceConfig {
   kind: VisionSourceKind;

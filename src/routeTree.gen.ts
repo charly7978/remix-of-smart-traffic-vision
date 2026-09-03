@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GestionRouteImport } from './routes/gestion'
 import { Route as InteligenciaRouteImport } from './routes/inteligencia'
 import { Route as ProyectoRouteImport } from './routes/proyecto'
 import { Route as SimuladorRouteImport } from './routes/simulador'
@@ -17,6 +18,11 @@ import { Route as SimuladorRouteImport } from './routes/simulador'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GestionRoute = GestionRouteImport.update({
+  id: '/gestion',
+  path: '/gestion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InteligenciaRoute = InteligenciaRouteImport.update({
@@ -37,12 +43,14 @@ const SimuladorRoute = SimuladorRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/gestion': typeof GestionRoute
   '/inteligencia': typeof InteligenciaRoute
   '/proyecto': typeof ProyectoRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/gestion': typeof GestionRoute
   '/inteligencia': typeof InteligenciaRoute
   '/proyecto': typeof ProyectoRoute
   '/simulador': typeof SimuladorRoute
@@ -50,20 +58,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/gestion': typeof GestionRoute
   '/inteligencia': typeof InteligenciaRoute
   '/proyecto': typeof ProyectoRoute
   '/simulador': typeof SimuladorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inteligencia' | '/proyecto' | '/simulador'
+  fullPaths: '/' | '/gestion' | '/inteligencia' | '/proyecto' | '/simulador'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inteligencia' | '/proyecto' | '/simulador'
-  id: '__root__' | '/' | '/inteligencia' | '/proyecto' | '/simulador'
+  to: '/' | '/gestion' | '/inteligencia' | '/proyecto' | '/simulador'
+  id:
+    '__root__' | '/' | '/gestion' | '/inteligencia' | '/proyecto' | '/simulador'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GestionRoute: typeof GestionRoute
   InteligenciaRoute: typeof InteligenciaRoute
   ProyectoRoute: typeof ProyectoRoute
   SimuladorRoute: typeof SimuladorRoute
@@ -76,6 +87,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gestion': {
+      id: '/gestion'
+      path: '/gestion'
+      fullPath: '/gestion'
+      preLoaderRoute: typeof GestionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inteligencia': {
@@ -104,6 +122,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GestionRoute: GestionRoute,
   InteligenciaRoute: InteligenciaRoute,
   ProyectoRoute: ProyectoRoute,
   SimuladorRoute: SimuladorRoute,

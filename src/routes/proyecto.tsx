@@ -884,58 +884,71 @@ function ProyectoPage() {
         id="contactos"
         eyebrow="DIRECTORIO INSTITUCIONAL"
         title="Contactos Reales — Intendencia de Tres de Febrero"
-        lead="Canales oficiales verificados para la presentación formal del proyecto y la gestión de la prueba piloto en Caseros."
+        lead="Canales oficiales y sedes operativas verificadas para la presentación formal del proyecto, homologación técnica y gestión de la prueba piloto en Caseros."
       >
         <DataTable
-          head={["Contacto", "Cargo / Área", "Canal / Vía"]}
+          head={["Dependencia / Contacto", "Área de Competencia", "Sede / Canal de Gestión"]}
           rows={[
             [
-              "Intendente Diego Valenzuela",
-              "Jefe Comunal de Tres de Febrero",
+              "Intendencia Municipal de Tres de Febrero",
+              "Máxima autoridad municipal",
               "Audiencia via Secretaría Privada · Alberdi 4840, Caseros",
             ],
             [
-              "Secretaría de Atención al Vecino",
-              "Recepción formal de proyectos y propuestas",
-              "atencionalvecino@tresdefebrero.gov.ar",
+              "Centro de Operaciones y Monitoreo (COM)",
+              "Seguridad urbana, videovigilancia y cámaras CCTV",
+              "Juan Bautista Alberdi 4840, Caseros · Tel. directo COM",
             ],
             [
-              "Secretaría de Trabajo y Producción",
-              "Innovación productiva y emprendedorismo",
+              "Secretaría de Seguridad y Movilidad Urbana",
+              "Planificación vial, corredores seguros e infraestructura semafórica",
+              "Juan Bautista Alberdi 4840, Caseros",
+            ],
+            [
+              "Dirección de Tránsito y Transporte / Tribunal de Faltas",
+              "Fiscalización vial, semaforización y homologaciones",
+              "Lisandro de la Torre 2034, Santos Lugares (Lunes a Viernes 08:00 a 14:00)",
+            ],
+            [
+              "Mesa de Entradas General",
+              "Ingreso formal de cartas de oficio y expedientes",
+              "Alberdi 4840 (Planta Baja), Caseros · Con sello de recepción",
+            ],
+            [
+              "Secretaría de Trabajo, Producción e Innovación",
+              "Innovación tecnológica urbana y articulación con empresas",
               "sectyp@tresdefebrero.gov.ar",
             ],
             [
-              "Centro de Atención al Vecino (CAV)",
-              "Derivación a áreas técnicas (Caseros)",
-              "Juan B. Alberdi 4840, Caseros",
+              "Secretaría de Atención al Vecino (CAV Caseros)",
+              "Recepción de propuestas y proyectos comunitarios",
+              "Alberdi 4840, Caseros · atencionalvecino@tresdefebrero.gov.ar",
             ],
             [
-              "Línea Municipal 147",
-              "Consultas generales y derivación",
-              "147 (local) · 0800-888-4448 (nacional)",
+              "Línea de Atención Municipal 147",
+              "Canal telefónico directo y derivación técnica",
+              "147 (local Tres de Febrero) · 0800-888-4448 (nacional)",
             ],
             [
-              "Plataforma Mi3F",
-              "Trámites, reportes urbanos y servicios digitales",
+              "Plataforma Digital Mi3F",
+              "Trámites digitales, expedientes y consultas de movilidad",
               "mi3f.tresdefebrero.gob.ar",
             ],
             [
-              "WhatsApp Municipal",
-              "Canal de difusión oficial",
+              "WhatsApp Municipal Oficial",
+              "Canal institucional de respuesta inmediata",
               "11-4090-6854",
-            ],
-            [
-              "Sitio Web Oficial",
-              "Portal institucional del Municipio",
-              "www.tresdefebrero.gov.ar",
             ],
           ]}
         />
         <Note>
-          Para la presentación formal, se recomienda dirigir la carta de oficio al Intendente
-          con copia a la Secretaría de Atención al Vecino, ingresándola por Mesa de Entradas
-          en Alberdi 4840 (Caseros) con sello de recepción. En paralelo, solicitar audiencia
-          técnica a través de los canales digitales (Mi3F o email).
+          <strong>Procedimiento de Ingreso Recomendado:</strong> Se aconseja presentar la carpeta
+          institucional formal dirigida al Intendente con copia a la Secretaría de Seguridad y
+          Movilidad Urbana, ingresándola por Mesa de Entradas en el Palacio Municipal (Alberdi 4840,
+          Caseros) solicitando número de expediente. En simultáneo, coordinar reunión técnica con el
+          Centro de Monitoreo (COM) y enviar la copia digital a{" "}
+          <code>sectyp@tresdefebrero.gov.ar</code> y{" "}
+          <code>atencionalvecino@tresdefebrero.gov.ar</code>.
         </Note>
       </Section>
 
@@ -948,9 +961,9 @@ function ProyectoPage() {
         title="Costos por Intersección en Pesos Argentinos"
         lead={
           <>
-            Desglose completo del hardware, infraestructura e ingeniería necesarios para
-            equipar una intersección con el sistema Ameghino AI. Valores de referencia
-            septiembre 2026 (TC aprox. $1.450 ARS/USD).
+            Desglose completo del hardware, infraestructura e ingeniería necesarios para equipar una
+            intersección con el sistema Ameghino AI. Valores de referencia septiembre 2026 (TC
+            aprox. $1.450 ARS/USD).
           </>
         }
       >
@@ -1010,7 +1023,9 @@ function ProyectoPage() {
             "TOTAL POR INTERSECCIÓN",
             "",
             "USD 3.434",
-            <span key="total" className="text-lg">$4.979.250</span>,
+            <span key="total" className="text-lg">
+              $4.979.250
+            </span>,
           ]}
         />
 
@@ -1034,9 +1049,9 @@ function ProyectoPage() {
 
         <Note>
           Los precios en pesos argentinos son orientativos y están sujetos a la volatilidad
-          cambiaria. Se recomienda actualizar la cotización al momento de la presentación
-          formal. Los valores de cámaras pueden variar entre $120.000 y $500.000 según modelo
-          y disponibilidad de stock. Para cámaras ANPR/LPR especializadas, el rango sube a
+          cambiaria. Se recomienda actualizar la cotización al momento de la presentación formal.
+          Los valores de cámaras pueden variar entre $120.000 y $500.000 según modelo y
+          disponibilidad de stock. Para cámaras ANPR/LPR especializadas, el rango sube a
           $1.400.000–$3.200.000 por unidad.
         </Note>
       </Section>
@@ -1054,37 +1069,49 @@ function ProyectoPage() {
           head={["Fase", "Duración", "Hito", "Entregable"]}
           rows={[
             [
-              <span key="f1" className="font-semibold text-signal-green">F1 · MVP Software</span>,
+              <span key="f1" className="font-semibold text-signal-green">
+                F1 · MVP Software
+              </span>,
               "Meses 1–3",
               "Simulador dual operativo con panel municipal",
               "Demo web funcional desplegada + exportación de telemetría",
             ],
             [
-              <span key="f2" className="font-semibold text-signal-green">F2 · Registro IP</span>,
+              <span key="f2" className="font-semibold text-signal-green">
+                F2 · Registro IP
+              </span>,
               "Mes 3",
               "Protección de propiedad intelectual",
               "Expediente DNDA + solicitud de patente INPI",
             ],
             [
-              <span key="f3" className="font-semibold text-signal-green">F3 · Gestión Institucional</span>,
+              <span key="f3" className="font-semibold text-signal-green">
+                F3 · Gestión Institucional
+              </span>,
               "Meses 4–5",
               "Contacto formal con el Municipio",
               "Carta de oficio + demo al Secretario + acta de reunión",
             ],
             [
-              <span key="f4" className="font-semibold text-signal-green">F4 · Hardware Prototipo</span>,
+              <span key="f4" className="font-semibold text-signal-green">
+                F4 · Hardware Prototipo
+              </span>,
               "Meses 5–7",
               "Prototipo de laboratorio funcional",
               "Jetson Orin + 2 cámaras IP + relés + modelo YOLO entrenado",
             ],
             [
-              <span key="f5" className="font-semibold text-signal-green">F5 · Piloto Vía Pública</span>,
+              <span key="f5" className="font-semibold text-signal-green">
+                F5 · Piloto Vía Pública
+              </span>,
               "Meses 8–12",
               "Instalación supervisada en Caseros",
               "1 cruce operativo + 4 meses de datos reales + bitácora fail-safe",
             ],
             [
-              <span key="f6" className="font-semibold text-signal-green">F6 · Evaluación y Escalado</span>,
+              <span key="f6" className="font-semibold text-signal-green">
+                F6 · Evaluación y Escalado
+              </span>,
               "Meses 12–18",
               "Informe de resultados y plan de escalado",
               "Reducción medida + feedback vecinal + plan 10 cruces",
@@ -1123,19 +1150,31 @@ function ProyectoPage() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-signal-amber">▲</span>
-                <span><strong className="text-foreground">Vandalismo:</strong> Gabinete anti-vandálico IP65 + cámaras a altura ≥ 5m</span>
+                <span>
+                  <strong className="text-foreground">Vandalismo:</strong> Gabinete anti-vandálico
+                  IP65 + cámaras a altura ≥ 5m
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-signal-amber">▲</span>
-                <span><strong className="text-foreground">Corte eléctrico:</strong> UPS 12V 30Ah (4h autonomía) + alertas por SMS</span>
+                <span>
+                  <strong className="text-foreground">Corte eléctrico:</strong> UPS 12V 30Ah (4h
+                  autonomía) + alertas por SMS
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-signal-amber">▲</span>
-                <span><strong className="text-foreground">Falla de IA:</strong> Fail-safe automático a ciclo fijo + notificación al COM</span>
+                <span>
+                  <strong className="text-foreground">Falla de IA:</strong> Fail-safe automático a
+                  ciclo fijo + notificación al COM
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-signal-amber">▲</span>
-                <span><strong className="text-foreground">Burocracia:</strong> Presentación simultánea a Municipio + Provincia + Club Emprendedores</span>
+                <span>
+                  <strong className="text-foreground">Burocracia:</strong> Presentación simultánea a
+                  Municipio + Provincia + Club Emprendedores
+                </span>
               </li>
             </ul>
           </div>

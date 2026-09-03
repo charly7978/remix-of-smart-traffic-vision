@@ -16,6 +16,8 @@
  */
 
 import type { CameraConfig } from "../traffic/trafficDataStore";
+import { VisionAnalyzer } from "./analysis";
+import type { VisionEvidence } from "./types";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -28,6 +30,7 @@ export interface CameraFrame {
   capturedAt: number;
   cameraId: string;
   approach: "N" | "S" | "E" | "W";
+  evidence?: VisionEvidence;
 }
 
 export type CameraStatus = "idle" | "connecting" | "connected" | "error" | "offline";
@@ -36,6 +39,7 @@ export interface CameraState {
   id: string;
   status: CameraStatus;
   lastFrame: CameraFrame | null;
+  lastEvidence: VisionEvidence | null;
   lastError: string | null;
   fps: number;
   latencyMs: number;
@@ -51,6 +55,7 @@ export class CameraConnector {
   private configs: CameraConfig[] = [];
   private intervals = new Map<string, ReturnType<typeof setInterval>>();
   private states = new Map<string, CameraState>();
+  private analyzers = new Map<string, VisionAnalyzer>();
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private onFrame: FrameCallback | null = null;
@@ -93,6 +98,7 @@ export class CameraConnector {
         id: cam.id,
         status: "connecting",
         lastFrame: null,
+        lastEvidence: null,
         lastError: null,
         fps: 0,
         latencyMs: 0,
@@ -116,6 +122,7 @@ export class CameraConnector {
     }
     this.intervals.clear();
     this.states.clear();
+    this.analyzers.clear();
     this.notifyStatus();
   }
 
@@ -127,6 +134,7 @@ export class CameraConnector {
       this.intervals.delete(id);
     }
     this.states.delete(id);
+    this.analyzers.delete(id);
     this.notifyStatus();
   }
 
@@ -148,7 +156,11 @@ export class CameraConnector {
       const latencyMs = Math.round(performance.now() - start);
 
       if (!loaded) {
-        return { ok: false, latencyMs, error: "No se pudo cargar la imagen. Verifique URL y CORS." };
+        return {
+          ok: false,
+          latencyMs,
+          error: "No se pudo cargar la imagen. Verifique URL y CORS.",
+        };
       }
 
       return { ok: true, latencyMs };
@@ -199,6 +211,13 @@ export class CameraConnector {
         this.ctx.drawImage(loaded, 0, 0, w, h);
 
         const imageData = this.ctx.getImageData(0, 0, w, h);
+
+        let analyzer = this.analyzers.get(cam.id);
+        if (!analyzer) {
+          analyzer = new VisionAnalyzer();
+          this.analyzers.set(cam.id, analyzer);
+        }
+        const evidence = analyzer.analyze(imageData);
         const latencyMs = Math.round(performance.now() - start);
 
         const frame: CameraFrame = {
@@ -208,6 +227,7 @@ export class CameraConnector {
           capturedAt: Date.now(),
           cameraId: cam.id,
           approach: cam.approach,
+          evidence,
         };
 
         frameCount++;
@@ -221,6 +241,7 @@ export class CameraConnector {
         this.updateState(cam.id, {
           status: "connected",
           lastFrame: frame,
+          lastEvidence: evidence,
           lastError: null,
           fps,
           latencyMs,
@@ -274,6 +295,13 @@ export class CameraConnector {
         const start = performance.now();
         this.ctx.drawImage(video, 0, 0, w, h);
         const imageData = this.ctx.getImageData(0, 0, w, h);
+
+        let analyzer = this.analyzers.get(cam.id);
+        if (!analyzer) {
+          analyzer = new VisionAnalyzer();
+          this.analyzers.set(cam.id, analyzer);
+        }
+        const evidence = analyzer.analyze(imageData);
         const latencyMs = Math.round(performance.now() - start);
 
         const frame: CameraFrame = {
@@ -283,6 +311,7 @@ export class CameraConnector {
           capturedAt: Date.now(),
           cameraId: cam.id,
           approach: cam.approach,
+          evidence,
         };
 
         frameCount++;
@@ -296,6 +325,7 @@ export class CameraConnector {
         this.updateState(cam.id, {
           status: "connected",
           lastFrame: frame,
+          lastEvidence: evidence,
           lastError: null,
           fps,
           latencyMs,

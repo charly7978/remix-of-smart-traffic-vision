@@ -20,14 +20,19 @@ import {
   subscribe,
   addFlowProfile,
   removeFlowProfile,
+  setActiveProfileId,
   addRealEvent,
   removeRealEvent,
   clearRealEvents,
   upsertCamera,
   removeCamera,
+  addFailSafeEntry,
+  resolveLastFailSafeEntry,
   clearFailSafeLog,
   parseFlowCsv,
   genId,
+  CASEROS_DEFAULT_PROFILE,
+  CASEROS_DEFAULT_CAMERAS,
   type FlowProfile,
   type CameraConfig,
   type MunicipalDataStore,
@@ -41,6 +46,7 @@ import {
 } from "@/lib/traffic/telemetryExporter";
 import { DualModePanel } from "@/components/simulator/DualModePanel";
 import { RealCameraView } from "@/components/simulator/RealCameraView";
+import { CameraConnector } from "@/lib/vision/cameraConnector";
 
 export const Route = createFileRoute("/gestion")({
   head: () => ({
@@ -95,7 +101,13 @@ function Section({
   );
 }
 
-function Badge({ tone, children }: { tone: "green" | "red" | "amber" | "muted"; children: ReactNode }) {
+function Badge({
+  tone,
+  children,
+}: {
+  tone: "green" | "red" | "amber" | "muted";
+  children: ReactNode;
+}) {
   const cls =
     tone === "green"
       ? "bg-signal-green/15 text-signal-green"
@@ -105,7 +117,9 @@ function Badge({ tone, children }: { tone: "green" | "red" | "amber" | "muted"; 
           ? "bg-signal-amber/15 text-signal-amber"
           : "bg-secondary text-muted-foreground";
   return (
-    <span className={`inline-flex rounded-md px-2 py-0.5 font-mono text-[10px] font-semibold ${cls}`}>
+    <span
+      className={`inline-flex rounded-md px-2 py-0.5 font-mono text-[10px] font-semibold ${cls}`}
+    >
       {children}
     </span>
   );
@@ -211,10 +225,27 @@ function CsvUploadSection() {
         className="hidden"
       />
 
-      <div className="flex items-center gap-3">
-        <Btn onClick={() => inputRef.current?.click()}>📁 Seleccionar CSV</Btn>
+      <div className="flex flex-wrap items-center gap-3">
+        <Btn onClick={() => inputRef.current?.click()}>📁 Subir Archivo CSV</Btn>
+        <button
+          type="button"
+          onClick={() => {
+            const exists = store.flowProfiles.some((p) => p.name.includes("San Martín y Urquiza"));
+            if (!exists) {
+              addFlowProfile({ ...CASEROS_DEFAULT_PROFILE, id: genId() });
+            } else {
+              const p = store.flowProfiles.find((x) => x.name.includes("San Martín y Urquiza"));
+              if (p) setActiveProfileId(p.id);
+            }
+          }}
+          className="rounded-lg border border-signal-green/40 bg-signal-green/10 px-3 py-1.5 font-mono text-[10px] font-semibold tracking-widest text-signal-green uppercase transition-colors hover:bg-signal-green hover:text-white"
+        >
+          🏙️ Aforo Real Caseros (24h)
+        </button>
         <span className="text-xs text-muted-foreground">
-          Formato: <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">hora;veh_h</code>
+          Formato:{" "}
+          <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px]">hora;veh_h</code>{" "}
+          (24 filas)
         </span>
       </div>
 
@@ -227,7 +258,8 @@ function CsvUploadSection() {
       {preview && (
         <div className="mt-4 rounded-lg border border-signal-green/30 bg-signal-green/5 p-4">
           <p className="mb-2 font-mono text-xs font-semibold text-signal-green">
-            ✓ Preview: {previewName}
+            ✓ Preview: {previewName} ({preview.reduce((a, b) => a + b, 0).toLocaleString("es-AR")}{" "}
+            veh/día total)
           </p>
           <div className="flex flex-wrap gap-1">
             {preview.map((v, i) => (
@@ -244,7 +276,7 @@ function CsvUploadSection() {
           </div>
           <div className="mt-3 flex gap-2">
             <Btn tone="green" onClick={confirmUpload}>
-              ✓ Confirmar y Guardar
+              ✓ Confirmar y Activar en Simulador
             </Btn>
             <Btn onClick={() => setPreview(null)}>Cancelar</Btn>
           </div>
@@ -255,29 +287,64 @@ function CsvUploadSection() {
       {store.flowProfiles.length > 0 && (
         <div className="mt-5">
           <p className="mb-2 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-            Perfiles Guardados
+            Perfiles de Tránsito Guardados en el Municipio
           </p>
           <div className="space-y-2">
-            {store.flowProfiles.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 px-3 py-2"
-              >
-                <div>
-                  <span className="font-mono text-xs font-semibold text-foreground">{p.name}</span>
-                  <span className="ml-2 font-mono text-[10px] text-muted-foreground">
-                    {new Date(p.uploadedAt).toLocaleDateString("es-AR")}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeFlowProfile(p.id)}
-                  className="text-xs text-muted-foreground transition-colors hover:text-destructive"
+            {store.flowProfiles.map((p) => {
+              const isActive = store.activeProfileId === p.id;
+              const totalVeh = p.profile.reduce((a, b) => a + b, 0);
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                    isActive
+                      ? "border-signal-green/50 bg-signal-green/10"
+                      : "border-border bg-secondary/20"
+                  }`}
                 >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`size-2.5 rounded-full ${isActive ? "bg-signal-green animate-pulse" : "bg-muted-foreground"}`}
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-semibold text-foreground">
+                          {p.name}
+                        </span>
+                        {isActive && (
+                          <span className="rounded bg-signal-green px-1.5 py-0.5 font-mono text-[9px] font-bold text-white uppercase">
+                            Activo en Simulador
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                        {totalVeh.toLocaleString("es-AR")} veh/día · Subido el{" "}
+                        {new Date(p.uploadedAt).toLocaleDateString("es-AR")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isActive && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveProfileId(p.id)}
+                        className="rounded border border-border bg-secondary/60 px-2.5 py-1 font-mono text-[10px] text-foreground transition-colors hover:bg-accent"
+                      >
+                        Activar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeFlowProfile(p.id)}
+                      className="text-xs text-muted-foreground transition-colors hover:text-destructive p-1"
+                      title="Eliminar perfil"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -413,15 +480,48 @@ function EventsSection() {
 
 function FailSafeSection() {
   const store = useStore();
+  const activeCount = store.failSafeLog.filter((e) => !e.resolved).length;
+
+  const triggerTestFailSafe = () => {
+    addFailSafeEntry({
+      id: genId(),
+      timestamp: new Date().toISOString(),
+      hour: new Date().getHours() + new Date().getMinutes() / 60,
+      reason: "Pérdida de enlace CCTV / Cámara Offline en Caseros (Prueba de Auditoría)",
+      duration: null,
+      resolved: false,
+      source: "simulation",
+    });
+  };
+
+  const handleResolve = () => {
+    resolveLastFailSafeEntry("Enlace COM restablecido por operador municipal");
+  };
 
   return (
     <Section
       id="failsafe-log"
       icon="🛡️"
-      title="Bitácora Fail-Safe"
-      subtitle="Historial de activaciones del modo seguro: cada vez que el controlador pasó a ciclo fijo por pérdida de percepción."
+      title="Bitácora de Contingencia y Fail-Safe"
+      subtitle="Historial de activaciones del modo seguro: cada vez que el controlador pasa a ciclo fijo pregrabado por corte de cámara, niebla o degradación de confianza."
       right={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={triggerTestFailSafe}
+            className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-1.5 font-mono text-[10px] font-semibold text-destructive transition-colors hover:bg-destructive hover:text-white"
+          >
+            ⚠️ Simular Falla
+          </button>
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={handleResolve}
+              className="rounded-lg border border-signal-green/40 bg-signal-green/10 px-3 py-1.5 font-mono text-[10px] font-semibold text-signal-green transition-colors hover:bg-signal-green hover:text-white"
+            >
+              ✓ Restablecer
+            </button>
+          )}
           {store.failSafeLog.length > 0 && (
             <>
               <Btn onClick={() => exportFailSafeCSV(store.failSafeLog)}>⬇ CSV</Btn>
@@ -435,9 +535,13 @@ function FailSafeSection() {
       }
     >
       {store.failSafeLog.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted-foreground">
-          No hay registros de fail-safe. Las activaciones se guardan automáticamente durante la simulación.
-        </p>
+        <div className="rounded-lg border border-dashed border-border bg-secondary/10 py-6 text-center">
+          <p className="text-xs text-muted-foreground">
+            No hay activaciones registradas. Las fallas de percepción se graban automáticamente
+            desde el simulador o con el botón{" "}
+            <strong className="text-foreground">Simular Falla</strong>.
+          </p>
+        </div>
       ) : (
         <div className="max-h-80 overflow-y-auto rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -447,26 +551,39 @@ function FailSafeSection() {
                   Hora
                 </th>
                 <th className="px-3 py-2 text-left font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-                  Razón
+                  Motivo / Causa
+                </th>
+                <th className="px-3 py-2 text-left font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+                  Duración
                 </th>
                 <th className="px-3 py-2 text-left font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
                   Estado
                 </th>
                 <th className="px-3 py-2 text-left font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-                  Fuente
+                  Origen
                 </th>
               </tr>
             </thead>
             <tbody>
               {store.failSafeLog.map((entry) => (
-                <tr key={entry.id} className="border-t border-border">
-                  <td className="px-3 py-2 font-mono text-xs text-foreground">
+                <tr
+                  key={entry.id}
+                  className="border-t border-border hover:bg-secondary/20 transition-colors"
+                >
+                  <td className="px-3 py-2 font-mono text-xs text-foreground whitespace-nowrap">
                     {new Date(entry.timestamp).toLocaleTimeString("es-AR")}
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{entry.reason}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-foreground whitespace-nowrap">
+                    {entry.duration
+                      ? `${entry.duration} s`
+                      : entry.resolved
+                        ? "Resuelto"
+                        : "En curso"}
+                  </td>
                   <td className="px-3 py-2">
                     <Badge tone={entry.resolved ? "green" : "red"}>
-                      {entry.resolved ? "Resuelto" : "Activo"}
+                      {entry.resolved ? "Normalizado" : "Fail-Safe Activo"}
                     </Badge>
                   </td>
                   <td className="px-3 py-2">
@@ -527,8 +644,6 @@ function CameraSection() {
   const handleTest = async () => {
     if (!form.url) return;
     setTestResult(null);
-    /* Importamos dinámicamente para no cargar el conector si no se usa */
-    const { CameraConnector } = await import("@/lib/vision/cameraConnector");
     const connector = new CameraConnector();
     const result = await connector.testConnection(form.url);
     setTestResult({ ok: result.ok, ms: result.latencyMs, error: result.error });
@@ -539,13 +654,24 @@ function CameraSection() {
       id="cameras"
       icon="📹"
       title="Cámaras IP del Cruce"
-      subtitle="Configurá hasta 4 cámaras IP (una por acceso: N/S/E/W). El sistema captura snapshots periódicos para alimentar el VisionAnalyzer."
+      subtitle="Configurá las cámaras del cruce de Caseros (Norte: Av. San Martín / Este: Urquiza). El sistema analiza las imágenes con VisionAnalyzer para calcular densidad y clasificar vehículos en vivo."
       right={
-        !editing ? (
-          <Btn tone="green" onClick={() => setEditing(true)}>
-            + Agregar Cámara
-          </Btn>
-        ) : undefined
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              CASEROS_DEFAULT_CAMERAS.forEach((c) => upsertCamera(c));
+            }}
+            className="rounded-lg border border-signal-green/40 bg-signal-green/10 px-3 py-1.5 font-mono text-[10px] font-semibold tracking-widest text-signal-green uppercase transition-colors hover:bg-signal-green hover:text-white"
+          >
+            🎥 Cargar 2 Cámaras Caseros
+          </button>
+          {!editing && (
+            <Btn tone="green" onClick={() => setEditing(true)}>
+              + Agregar Cámara
+            </Btn>
+          )}
+        </div>
       }
     >
       {/* Formulario */}
@@ -632,9 +758,7 @@ function CameraSection() {
                   : "border-destructive/30 bg-destructive/5 text-destructive"
               }`}
             >
-              {testResult.ok
-                ? `✓ Conexión exitosa (${testResult.ms} ms)`
-                : `✕ ${testResult.error}`}
+              {testResult.ok ? `✓ Conexión exitosa (${testResult.ms} ms)` : `✕ ${testResult.error}`}
             </div>
           )}
 
@@ -698,8 +822,8 @@ function CameraSection() {
       ) : (
         !editing && (
           <p className="py-4 text-center text-xs text-muted-foreground">
-            No hay cámaras configuradas. Presioná <span className="font-semibold">+ Agregar Cámara</span> para
-            empezar.
+            No hay cámaras configuradas. Presioná{" "}
+            <span className="font-semibold">+ Agregar Cámara</span> para empezar.
           </p>
         )
       )}
@@ -777,11 +901,11 @@ function GestionPage() {
         <CameraSection />
 
         {/* Modo Dual */}
-        <DualModePanel
-          flowProfile={
-            store.flowProfiles.length > 0 ? store.flowProfiles[0]!.profile : undefined
-          }
-        />
+        {(() => {
+          const activeProf =
+            store.flowProfiles.find((p) => p.id === store.activeProfileId) ?? store.flowProfiles[0];
+          return <DualModePanel flowProfile={activeProf ? activeProf.profile : undefined} />;
+        })()}
       </div>
     </main>
   );

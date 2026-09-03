@@ -59,16 +59,54 @@ function CameraCard({ state, config }: { state: CameraState | null; config: Came
     canvasRef.current.width = width;
     canvasRef.current.height = height;
     ctx.putImageData(imageData, 0, 0);
-  }, [state?.lastFrame]);
+
+    // Dibujar bounding boxes sobre el fotograma real
+    if (state.lastEvidence?.detections && state.lastEvidence.detections.length > 0) {
+      for (const det of state.lastEvidence.detections) {
+        const isEmerg = det.isEmergency;
+        const isPed = det.isPedestrian;
+        const color = isEmerg ? "#ef4444" : isPed ? "#38bdf8" : "#22c55e";
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(det.box.x, det.box.y, det.box.w, det.box.h);
+
+        // Etiqueta con fondo
+        const tag = `${det.cls.toUpperCase()} ${(det.confidence * 100).toFixed(0)}%`;
+        ctx.font = "bold 10px monospace";
+        const tagW = ctx.measureText(tag).width + 6;
+        const tagY = Math.max(14, det.box.y);
+        ctx.fillStyle = color;
+        ctx.fillRect(det.box.x, tagY - 14, tagW, 14);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(tag, det.box.x + 3, tagY - 3);
+      }
+    }
+  }, [state?.lastFrame, state?.lastEvidence]);
+
+  const totalDets = state?.lastEvidence
+    ? state.lastEvidence.counts.car +
+      state.lastEvidence.counts.bus +
+      state.lastEvidence.counts.truck +
+      state.lastEvidence.counts.moto +
+      state.lastEvidence.counts.pedestrian
+    : 0;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-semibold text-foreground">{config.label}</span>
           <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-signal-green">
-            {config.approach}
+            {config.approach === "N"
+              ? "Norte"
+              : config.approach === "S"
+                ? "Sur"
+                : config.approach === "E"
+                  ? "Este"
+                  : "Oeste"}
           </span>
         </div>
         {state && <StatusDot status={state.status} />}
@@ -77,17 +115,14 @@ function CameraCard({ state, config }: { state: CameraState | null; config: Came
       {/* Canvas / Placeholder */}
       <div className="relative aspect-video bg-black/90">
         {state?.lastFrame ? (
-          <canvas
-            ref={canvasRef}
-            className="size-full object-contain"
-          />
+          <canvas ref={canvasRef} className="size-full object-contain" />
         ) : (
-          <div className="flex size-full items-center justify-center">
+          <div className="flex size-full items-center justify-center p-4 text-center">
             <p className="font-mono text-xs text-muted-foreground">
               {state?.status === "error"
-                ? state.lastError ?? "Error de conexión"
+                ? (state.lastError ?? "Error de conexión")
                 : state?.status === "connecting"
-                  ? "Conectando con la cámara..."
+                  ? "Sincronizando video con la cámara de Caseros..."
                   : "Sin señal de video"}
             </p>
           </div>
@@ -95,22 +130,35 @@ function CameraCard({ state, config }: { state: CameraState | null; config: Came
 
         {/* Overlay de métricas */}
         {state?.status === "connected" && (
-          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/60 px-2 py-1">
-            <span className="font-mono text-[10px] text-signal-green">
-              {state.fps.toFixed(1)} FPS
-            </span>
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {state.latencyMs} ms
-            </span>
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/75 px-2.5 py-1 text-white">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] text-signal-green font-semibold">
+                {state.fps.toFixed(1)} FPS
+              </span>
+              <span className="font-mono text-[10px] text-zinc-300">
+                Latencia: <strong className="text-white">{state.latencyMs} ms</strong>
+              </span>
+              <span className="font-mono text-[10px] text-zinc-300">
+                Objetos: <strong className="text-signal-green">{totalDets}</strong>
+              </span>
+            </div>
+            {state.lastEvidence && (
+              <span className="font-mono text-[10px] text-signal-green">
+                Conf. {(state.lastEvidence.detectionRate * 100).toFixed(0)}%
+              </span>
+            )}
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="border-t border-border px-3 py-2">
-        <p className="truncate font-mono text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between border-t border-border px-3 py-2 bg-secondary/20">
+        <p className="truncate font-mono text-[10px] text-muted-foreground max-w-[280px]">
           {config.url || "URL no configurada"}
         </p>
+        <span className="font-mono text-[9px] text-muted-foreground uppercase">
+          YOLOv11 Edge Vision
+        </span>
       </div>
     </div>
   );

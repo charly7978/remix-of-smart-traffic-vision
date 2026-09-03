@@ -19,9 +19,11 @@ import type { FailSafeEntry } from "./trafficDataStore";
 export interface TelemetryRecord {
   timestamp_iso: string;
   hour: string;
+  intersection_name: string;
   latency_ms: number;
   vehicle_count_ns: number;
   vehicle_count_ew: number;
+  total_vehicles: number;
   queue_ns: number;
   queue_ew: number;
   confidence: number;
@@ -43,6 +45,7 @@ export interface TelemetryExport {
   schema: "ameghino.telemetry.v1";
   exported_at: string;
   intersection_id: string;
+  intersection_name: string;
   total_records: number;
   records: TelemetryRecord[];
 }
@@ -61,12 +64,16 @@ function clockLabel(hour: number): string {
 export function decisionsToRecords(decisions: AgentDecision[]): TelemetryRecord[] {
   return decisions.map((d) => {
     const ev: Evidence = d.evidence;
+    const vNs = ev.axis === "NS" ? ev.sigma : ev.sigmaOther;
+    const vEw = ev.axis === "EW" ? ev.sigma : ev.sigmaOther;
     return {
       timestamp_iso: new Date().toISOString(),
       hour: clockLabel(d.hour),
+      intersection_name: "Av. San Martín y Urquiza · Caseros (3F)",
       latency_ms: d.latencyMs,
-      vehicle_count_ns: ev.axis === "NS" ? ev.sigma : ev.sigmaOther,
-      vehicle_count_ew: ev.axis === "EW" ? ev.sigma : ev.sigmaOther,
+      vehicle_count_ns: vNs,
+      vehicle_count_ew: vEw,
+      total_vehicles: vNs + vEw,
       queue_ns: ev.axis === "NS" ? ev.queue : 0,
       queue_ew: ev.axis === "EW" ? ev.queue : 0,
       confidence: Math.round(d.confidence * 1000) / 1000,
@@ -174,6 +181,7 @@ export function exportDecisionsJSON(decisions: AgentDecision[]): void {
     schema: "ameghino.telemetry.v1",
     exported_at: new Date().toISOString(),
     intersection_id: "AR-BA-3F-0142",
+    intersection_name: "Av. San Martín y Urquiza · Caseros (Tres de Febrero)",
     total_records: records.length,
     records,
   };
@@ -226,13 +234,27 @@ export function exportSnapshotJSON(snap: Snapshot): void {
  * Exporta resultados de comparación dual como CSV.
  */
 export function exportDualComparisonCSV(
-  history: { hour: number; adaptiveWait: number; fixedWait: number; adaptiveQueue: number; fixedQueue: number }[],
+  history: {
+    hour: number;
+    adaptiveWait: number;
+    fixedWait: number;
+    adaptiveQueue: number;
+    fixedQueue: number;
+  }[],
 ): void {
   if (history.length === 0) return;
-  const headers = ["hour", "adaptive_wait_s", "fixed_wait_s", "adaptive_queue", "fixed_queue", "improvement_pct"];
+  const headers = [
+    "hour",
+    "adaptive_wait_s",
+    "fixed_wait_s",
+    "adaptive_queue",
+    "fixed_queue",
+    "improvement_pct",
+  ];
   const headerLine = headers.join(";");
   const lines = history.map((h) => {
-    const improv = h.fixedWait > 0 ? Math.round(((h.fixedWait - h.adaptiveWait) / h.fixedWait) * 100) : 0;
+    const improv =
+      h.fixedWait > 0 ? Math.round(((h.fixedWait - h.adaptiveWait) / h.fixedWait) * 100) : 0;
     return [
       escapeCSV(h.hour.toFixed(2)),
       escapeCSV(h.adaptiveWait.toFixed(2)),

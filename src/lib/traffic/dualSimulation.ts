@@ -110,8 +110,7 @@ export class DualSimulation {
         hour: this.adaptiveEngine.hour,
         adaptiveWait: this.adaptiveEngine.recentWait,
         fixedWait: this.fixedEngine.recentWait,
-        adaptiveQueue:
-          this.adaptiveEngine.queueCount("NS") + this.adaptiveEngine.queueCount("EW"),
+        adaptiveQueue: this.adaptiveEngine.queueCount("NS") + this.adaptiveEngine.queueCount("EW"),
         fixedQueue: this.fixedEngine.queueCount("NS") + this.fixedEngine.queueCount("EW"),
       });
       if (this.history.length > 300) this.history.shift();
@@ -129,14 +128,10 @@ export class DualSimulation {
         : 0;
 
     const throughputPct =
-      f.passed > 0
-        ? Math.round(((a.passed - f.passed) / Math.max(1, f.passed)) * 100)
-        : 0;
+      f.passed > 0 ? Math.round(((a.passed - f.passed) / Math.max(1, f.passed)) * 100) : 0;
 
     const co2Pct =
-      f.co2SavedKg > 0
-        ? Math.round((a.co2SavedKg / Math.max(0.01, f.co2SavedKg)) * 100)
-        : 0;
+      f.co2SavedKg > 0 ? Math.round((a.co2SavedKg / Math.max(0.01, f.co2SavedKg)) * 100) : 0;
 
     return {
       adaptive: a,

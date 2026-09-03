@@ -29,6 +29,13 @@ import {
   exportDecisionsJSON,
   exportSnapshotJSON,
 } from "@/lib/traffic/telemetryExporter";
+import {
+  addFailSafeEntry,
+  resolveLastFailSafeEntry,
+  getActiveProfile,
+  subscribe as subscribeMunicipalStore,
+  type FlowProfile,
+} from "@/lib/traffic/trafficDataStore";
 
 export const Route = createFileRoute("/simulador")({
   head: () => ({
@@ -307,6 +314,42 @@ function SimuladorPage() {
   const [running, setRunning] = useState(true);
   const [startHour, setStartHour] = useState(8);
 
+  const [activeMunProfile, setActiveMunProfile] = useState<FlowProfile | null>(getActiveProfile);
+  const prevFailSafeRef = useRef(false);
+
+  useEffect(() => {
+    return subscribeMunicipalStore(() => {
+      setActiveMunProfile(getActiveProfile());
+    });
+  }, []);
+
+  const isFs = snap?.failSafe ?? false;
+  const cameraOffline = snap?.cameraOffline;
+  const weather = snap?.weather;
+  const currentHour = snap?.hour ?? 0;
+
+  useEffect(() => {
+    if (!snap) return;
+    if (!prevFailSafeRef.current && isFs) {
+      addFailSafeEntry({
+        id: `fs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: new Date().toISOString(),
+        hour: Math.round(currentHour * 100) / 100,
+        reason: cameraOffline
+          ? "Pérdida de enlace CCTV / Cámara Offline en Caseros"
+          : weather === "fog"
+            ? "Visibilidad degradada por niebla extrema"
+            : "Baja tasa de confianza en detección (< 55%)",
+        duration: null,
+        resolved: false,
+        source: "simulation",
+      });
+    } else if (prevFailSafeRef.current && !isFs) {
+      resolveLastFailSafeEntry("Percepción de borde restablecida a parámetros nominales");
+    }
+    prevFailSafeRef.current = isFs;
+  }, [isFs, cameraOffline, weather, currentHour, snap]);
+
   optsRef.current = layers;
   viewRef.current = view;
   pausedRef.current = paused || isCalibrating; // Pausa forzada durante calibración
@@ -314,7 +357,8 @@ function SimuladorPage() {
   useEffect(() => {
     loadSprites();
     const engine = new TrafficEngine();
-    engine.setFlowProfile(flow);
+    const initialFlow = activeMunProfile?.profile ?? flow;
+    engine.setFlowProfile(initialFlow);
     engine.setEvents(mode === "guiado" ? [] : events);
     engine.setNsShare(nsShare);
     engine.setMinutesPerSecond(speed);
@@ -652,6 +696,7 @@ function SimuladorPage() {
                     </button>
                   </>
                 )}
+              </div>
             </div>
             <div className="relative">
               {isCalibrating && <GeometryEditor onClose={() => setIsCalibrating(false)} />}
@@ -903,17 +948,57 @@ function SimuladorPage() {
           </Panel>
 
           {mode === "libre" && (
-            <Panel
-              title="Línea de Tiempo de Eventos de la Jornada"
-              subtitle="Cargue eventos programados: niebla matinal, hora pico, corte de sensor o emergencias del SAME 3F."
-            >
-              <EventTimeline
-                events={events}
-                currentHour={snap?.hour ?? startHour}
-                onAdd={addEvent}
-                onRemove={removeEvent}
-              />
-            </Panel>
+            <>
+              {activeMunProfile && (
+                <div className="flex items-center justify-between rounded-xl border border-signal-green/40 bg-signal-green/10 p-4">
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest text-signal-green uppercase font-semibold">
+                      🏛️ Aforo Municipal Cargado desde Gestión
+                    </span>
+                    <p className="text-xs font-semibold text-foreground">{activeMunProfile.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {activeMunProfile.profile.reduce((a, b) => a + b, 0).toLocaleString("es-AR")}{" "}
+                      veh/día acumulados en Caseros
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFlow([...activeMunProfile.profile]);
+                      engine()?.setFlowProfile([...activeMunProfile.profile]);
+                    }}
+                    className="rounded-lg bg-signal-green px-3 py-1.5 font-mono text-[10px] font-bold text-white transition-opacity hover:opacity-90 uppercase tracking-wider"
+                  >
+                    Alimentar Motor
+                  </button>
+                </div>
+              )}
+              <Panel
+                title="Perfil Horario de Demanda Vehicular (Caseros)"
+                subtitle="Ajuste fino del flujo por hora o selección de presets pregrabados del municipio."
+              >
+                <FlowProfileEditor
+                  flow={flow}
+                  currentHour={snap?.hour ?? startHour}
+                  onChange={updateFlow}
+                  onSelectPreset={(p) => {
+                    setFlow(p);
+                    engine()?.setFlowProfile(p);
+                  }}
+                />
+              </Panel>
+              <Panel
+                title="Línea de Tiempo de Eventos de la Jornada"
+                subtitle="Cargue eventos programados: niebla matinal, hora pico, corte de sensor o emergencias del SAME 3F."
+              >
+                <EventTimeline
+                  events={events}
+                  currentHour={snap?.hour ?? startHour}
+                  onAdd={addEvent}
+                  onRemove={removeEvent}
+                />
+              </Panel>
+            </>
           )}
         </div>
 
