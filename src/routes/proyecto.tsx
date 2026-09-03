@@ -876,6 +876,271 @@ function ProyectoPage() {
           Abrir la demostración en vivo
         </Link>
       </div>
+
+      {/* ========================================================================
+          9. Contactos Reales — Intendencia de Tres de Febrero
+          ======================================================================== */}
+      <Section
+        id="contactos"
+        eyebrow="DIRECTORIO INSTITUCIONAL"
+        title="Contactos Reales — Intendencia de Tres de Febrero"
+        lead="Canales oficiales verificados para la presentación formal del proyecto y la gestión de la prueba piloto en Caseros."
+      >
+        <DataTable
+          head={["Contacto", "Cargo / Área", "Canal / Vía"]}
+          rows={[
+            [
+              "Intendente Diego Valenzuela",
+              "Jefe Comunal de Tres de Febrero",
+              "Audiencia via Secretaría Privada · Alberdi 4840, Caseros",
+            ],
+            [
+              "Secretaría de Atención al Vecino",
+              "Recepción formal de proyectos y propuestas",
+              "atencionalvecino@tresdefebrero.gov.ar",
+            ],
+            [
+              "Secretaría de Trabajo y Producción",
+              "Innovación productiva y emprendedorismo",
+              "sectyp@tresdefebrero.gov.ar",
+            ],
+            [
+              "Centro de Atención al Vecino (CAV)",
+              "Derivación a áreas técnicas (Caseros)",
+              "Juan B. Alberdi 4840, Caseros",
+            ],
+            [
+              "Línea Municipal 147",
+              "Consultas generales y derivación",
+              "147 (local) · 0800-888-4448 (nacional)",
+            ],
+            [
+              "Plataforma Mi3F",
+              "Trámites, reportes urbanos y servicios digitales",
+              "mi3f.tresdefebrero.gob.ar",
+            ],
+            [
+              "WhatsApp Municipal",
+              "Canal de difusión oficial",
+              "11-4090-6854",
+            ],
+            [
+              "Sitio Web Oficial",
+              "Portal institucional del Municipio",
+              "www.tresdefebrero.gov.ar",
+            ],
+          ]}
+        />
+        <Note>
+          Para la presentación formal, se recomienda dirigir la carta de oficio al Intendente
+          con copia a la Secretaría de Atención al Vecino, ingresándola por Mesa de Entradas
+          en Alberdi 4840 (Caseros) con sello de recepción. En paralelo, solicitar audiencia
+          técnica a través de los canales digitales (Mi3F o email).
+        </Note>
+      </Section>
+
+      {/* ========================================================================
+          10. Costos Detallados en Pesos Argentinos
+          ======================================================================== */}
+      <Section
+        id="costos-ars"
+        eyebrow="PRESUPUESTO DETALLADO"
+        title="Costos por Intersección en Pesos Argentinos"
+        lead={
+          <>
+            Desglose completo del hardware, infraestructura e ingeniería necesarios para
+            equipar una intersección con el sistema Ameghino AI. Valores de referencia
+            septiembre 2026 (TC aprox. $1.450 ARS/USD).
+          </>
+        }
+      >
+        <DataTable
+          head={["Componente", "Especificación", "USD", "ARS"]}
+          rows={[
+            [
+              "NVIDIA Jetson Orin Nano 8GB",
+              "Edge AI Dev Kit · Ejecución de YOLO + VLM · TensorRT INT8",
+              "USD 249",
+              "$361.000",
+            ],
+            [
+              "Cámara IP 4MP WDR ×2",
+              "Hikvision DS-2CD2T47G2 o Dahua equiv. · Visión nocturna · PoE",
+              "USD 400 c/u",
+              "$580.000 c/u",
+            ],
+            [
+              "Gabinete estanco IP65",
+              "NEMA 4X para poste · Ventilación forzada · Cerradura",
+              "USD 150",
+              "$217.500",
+            ],
+            [
+              "Modem 4G Industrial",
+              "Teltonika RUT241 o equiv. · SIM dual · VPN integrada",
+              "USD 120",
+              "$174.000",
+            ],
+            [
+              "UPS para poste (12V 30Ah)",
+              "Respaldo 4 horas ante corte · Carga solar opcional",
+              "USD 80",
+              "$116.000",
+            ],
+            [
+              "Cableado CAT6 + PoE ×2",
+              "Instalación a poste existente · Canaleta exterior",
+              "USD 100",
+              "$145.000",
+            ],
+            [
+              "Módulo relés optoacoplados",
+              "4 canales · Interfaz con controlador Autotrol/Teknotrans",
+              "USD 35",
+              "$50.750",
+            ],
+            [
+              "Ingeniería e integración",
+              "Mano de obra · Calibración · Puesta en marcha · 3 meses soporte",
+              "USD 2.000",
+              "$2.900.000",
+            ],
+          ]}
+          footRow={[
+            "TOTAL POR INTERSECCIÓN",
+            "",
+            "USD 3.434",
+            <span key="total" className="text-lg">$4.979.250</span>,
+          ]}
+        />
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <KpiCard
+            label="Costo Ameghino AI"
+            value="$4,9M"
+            hint="Por intersección completa con 2 cámaras, edge AI y 3 meses de soporte."
+          />
+          <KpiCard
+            label="Solución Corporativa"
+            value="$22–29M"
+            hint="Sistemas llave en mano de proveedores internacionales (USD 15.000–20.000)."
+          />
+          <KpiCard
+            label="Ahorro vs. Corporativa"
+            value="75-83%"
+            hint="Reducción de costo por usar hardware comercial y desarrollo propio."
+          />
+        </div>
+
+        <Note>
+          Los precios en pesos argentinos son orientativos y están sujetos a la volatilidad
+          cambiaria. Se recomienda actualizar la cotización al momento de la presentación
+          formal. Los valores de cámaras pueden variar entre $120.000 y $500.000 según modelo
+          y disponibilidad de stock. Para cámaras ANPR/LPR especializadas, el rango sube a
+          $1.400.000–$3.200.000 por unidad.
+        </Note>
+      </Section>
+
+      {/* ========================================================================
+          11. Cronograma Detallado (18 meses)
+          ======================================================================== */}
+      <Section
+        id="cronograma"
+        eyebrow="HOJA DE RUTA"
+        title="Cronograma Detallado de Implementación — 18 Meses"
+        lead="Plan de acción dividido en 6 fases con hitos concretos, entregables verificables y responsables."
+      >
+        <DataTable
+          head={["Fase", "Duración", "Hito", "Entregable"]}
+          rows={[
+            [
+              <span key="f1" className="font-semibold text-signal-green">F1 · MVP Software</span>,
+              "Meses 1–3",
+              "Simulador dual operativo con panel municipal",
+              "Demo web funcional desplegada + exportación de telemetría",
+            ],
+            [
+              <span key="f2" className="font-semibold text-signal-green">F2 · Registro IP</span>,
+              "Mes 3",
+              "Protección de propiedad intelectual",
+              "Expediente DNDA + solicitud de patente INPI",
+            ],
+            [
+              <span key="f3" className="font-semibold text-signal-green">F3 · Gestión Institucional</span>,
+              "Meses 4–5",
+              "Contacto formal con el Municipio",
+              "Carta de oficio + demo al Secretario + acta de reunión",
+            ],
+            [
+              <span key="f4" className="font-semibold text-signal-green">F4 · Hardware Prototipo</span>,
+              "Meses 5–7",
+              "Prototipo de laboratorio funcional",
+              "Jetson Orin + 2 cámaras IP + relés + modelo YOLO entrenado",
+            ],
+            [
+              <span key="f5" className="font-semibold text-signal-green">F5 · Piloto Vía Pública</span>,
+              "Meses 8–12",
+              "Instalación supervisada en Caseros",
+              "1 cruce operativo + 4 meses de datos reales + bitácora fail-safe",
+            ],
+            [
+              <span key="f6" className="font-semibold text-signal-green">F6 · Evaluación y Escalado</span>,
+              "Meses 12–18",
+              "Informe de resultados y plan de escalado",
+              "Reducción medida + feedback vecinal + plan 10 cruces",
+            ],
+          ]}
+        />
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-secondary/20 p-5">
+            <SubHeading>Métricas de Éxito del Piloto</SubHeading>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <span className="text-signal-green">●</span>
+                Reducción ≥ 15% en tiempo de espera promedio vs. ciclo fijo
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-green">●</span>
+                Disponibilidad del sistema ≥ 99.5% (uptime medido)
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-green">●</span>
+                Zero conflictos de verde (validado por enclavamiento hardware)
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-green">●</span>
+                Tasa de clasificación YOLO ≥ 90% en condiciones normales
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-green">●</span>
+                Activaciones fail-safe ≤ 3 por semana (fuera de inclemencias)
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-xl border border-border bg-secondary/20 p-5">
+            <SubHeading>Riesgos y Mitigaciones</SubHeading>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <span className="text-signal-amber">▲</span>
+                <span><strong className="text-foreground">Vandalismo:</strong> Gabinete anti-vandálico IP65 + cámaras a altura ≥ 5m</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-amber">▲</span>
+                <span><strong className="text-foreground">Corte eléctrico:</strong> UPS 12V 30Ah (4h autonomía) + alertas por SMS</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-amber">▲</span>
+                <span><strong className="text-foreground">Falla de IA:</strong> Fail-safe automático a ciclo fijo + notificación al COM</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-signal-amber">▲</span>
+                <span><strong className="text-foreground">Burocracia:</strong> Presentación simultánea a Municipio + Provincia + Club Emprendedores</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </Section>
     </main>
   );
 }

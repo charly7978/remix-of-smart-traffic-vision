@@ -24,6 +24,11 @@ import {
   type Snapshot,
   type Weather,
 } from "@/lib/traffic/engine";
+import {
+  exportDecisionsCSV,
+  exportDecisionsJSON,
+  exportSnapshotJSON,
+} from "@/lib/traffic/telemetryExporter";
 
 export const Route = createFileRoute("/simulador")({
   head: () => ({
@@ -622,7 +627,31 @@ function SimuladorPage() {
                 <Toggle on={layers.labels} onClick={() => toggleLayer("labels")}>
                   Rótulos de Calles
                 </Toggle>
-              </div>
+                {snap && snap.decisions.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => exportDecisionsCSV(snap.decisions)}
+                      className="flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-3 py-1.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      ⬇ CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportDecisionsJSON(snap.decisions)}
+                      className="flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-3 py-1.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      ⬇ JSON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportSnapshotJSON(snap)}
+                      className="flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-3 py-1.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      📸 Snap
+                    </button>
+                  </>
+                )}
             </div>
             <div className="relative">
               {isCalibrating && <GeometryEditor onClose={() => setIsCalibrating(false)} />}

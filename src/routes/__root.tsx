@@ -152,6 +152,7 @@ function RootComponent() {
 const NAV_LINKS = [
   { to: "/", label: "Inicio", exact: true },
   { to: "/simulador", label: "Simulador", exact: false },
+  { to: "/gestion", label: "Gestión", exact: false },
   { to: "/inteligencia", label: "Inteligencia", exact: false },
   { to: "/proyecto", label: "Plan de Implementación", exact: false },
 ] as const;
